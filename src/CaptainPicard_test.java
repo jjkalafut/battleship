@@ -8,7 +8,7 @@ import java.util.Random;
  *
  * @author John. Created Mar 18, 2013.
  */
-public class CaptainPicard implements Captain, Constants {
+public class CaptainPicard_test implements Captain, Constants {
 
     private int[][] theirShots = new int[10][10];
     private boolean[][] theirGrid = new boolean[10][10];
