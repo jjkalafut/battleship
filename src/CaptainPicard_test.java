@@ -15,6 +15,7 @@ public class CaptainPicard_test implements Captain, Constants {
     private int[][] hitsHeat = new int[10][10];
     private int[][] shotsHeat = new int[10][10];
     private double[][] avgHeat = new double[10][10];
+    private double heatFactor = 0;
     private boolean[][] myShips = new boolean[10][10];
     private ArrayList<String[]> hitShips;
     private boolean[] enemyShips = new boolean[5];
@@ -27,11 +28,14 @@ public class CaptainPicard_test implements Captain, Constants {
     private Fleet myFleet;
     private int matchNumber = 0;
     private int matchTotal;
+    private double cur_ver = 0;
+    private double cur_hor = 0;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
         this.lastShot = null;
         this.matchTotal = numMatches;
+        
         for (boolean[] b : this.theirGrid) {
             Arrays.fill(b, false);
         }
@@ -81,6 +85,8 @@ public class CaptainPicard_test implements Captain, Constants {
                 this.myFleet.placeShip(placement[0], placement[1], placement[2], shipType);
             }
         }
+        
+        this.heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
 
     }
 
@@ -257,7 +263,7 @@ public class CaptainPicard_test implements Captain, Constants {
     //make a shot based on enemy ship placements (covert intel)
 
     private Coordinate makeEducatedShot() {
-        double heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
+        
 
         double[][] heat = new double[10][10];
 
@@ -304,7 +310,7 @@ public class CaptainPicard_test implements Captain, Constants {
 
         //apply factors
         for (int q = 0; q < 100; q++) {
-            heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * heatFactor;
+            heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;
         }
         double best = 0;
         int bestX = 0;
@@ -344,79 +350,42 @@ public class CaptainPicard_test implements Captain, Constants {
             	//ship hit before
                 if (this.hitShips.get(result % 10) != null) {
                 	//ship is verticle
+                	this.hitShips.get(result % 10)[4] = String.valueOf( Integer.parseInt(this.hitShips.get(result % 10)[4]) + 1);
+                	
                     if (this.hitShips.get(result % 10)[0].equals("1")) {
                     	if( this.lastShot.getX() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
                     		//System.out.println("line 348");
-                    		this.hitShips.get(result % 10)[0] = "0";
-                            String middle = this.hitShips.get(result % 10)[1];
-                            this.hitShips.get(result % 10)[1] = this.hitShips.get(result % 10)[2];
-                            this.hitShips.get(result % 10)[2] = middle;
+                    		this.hitShips.get(result % 10)[0] = "0";             		
                             
-                            for (int gg = 3; gg < this.hitShips.get(result % 10).length; gg++) {
-	                            if (this.hitShips.get(result % 10)[gg].equals("f")) {
-	                                this.hitShips.get(result % 10)[gg] = "" + lastShot.getX();
-	                                //System.out.println("replaced an f");
-	                                break;
-	                            }
-                            }
                     	}
-                    	else{
-	                        for (int gg = 3; gg < this.hitShips.get(result % 10).length; gg++) {
-	                            if (this.hitShips.get(result % 10)[gg].equals("f")) {
-	                                this.hitShips.get(result % 10)[gg] = "" + lastShot.getY();
-	                                //System.out.println("replaced an f");
-	                                break;
-	                            }
-	                        }
-                    	}
+                    	
                     } 
                     //horizontal
                     else {
                     	if( this.lastShot.getY() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
-                    		//System.out.println("line 366");
                     		this.hitShips.get(result % 10)[0] = "1";
-                            String middle = this.hitShips.get(result % 10)[1];
-                            this.hitShips.get(result % 10)[1] = this.hitShips.get(result % 10)[2];
-                            this.hitShips.get(result % 10)[2] = middle;
-                            
-                            for (int gg = 3; gg < this.hitShips.get(result % 10).length; gg++) {
-	                            if (this.hitShips.get(result % 10)[gg].equals("f")) {
-	                                this.hitShips.get(result % 10)[gg] = "" + lastShot.getY();
-	                                //System.out.println("replaced an f");
-	                                break;
-	                            }
-                            }
                     	}
-                    	else{
-                    		for (int gg = 3; gg < this.hitShips.get(result % 10).length; gg++) {
-	                            if (this.hitShips.get(result % 10)[gg].equals("f")) {
-	                                this.hitShips.get(result % 10)[gg] = "" + lastShot.getX();
-	                                //System.out.println("replaced an f");
-	                                break;
-	                            }
-	                        }
-                    	}
+                    	
                     }
                 }
                 //ship never hit before
                 else {
                     int shipMod = result % 10;
                     if (shipMod == 0) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getY(), "" + lastShot.getX(), "f"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "1", "0"});
                     } else if (shipMod == 1 || shipMod == 2) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getY(), "" + lastShot.getX(), "f", "f"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "2", "0"});
                     } else if (shipMod == 3) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getY(), "" + lastShot.getX(), "f", "f", "f"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "3", "0"});
                     } else {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getY(), "" + lastShot.getX(), "f", "f", "f", "f"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "4", "0"});
                     }
 
                 }
             }
         }
 
-        while (buildShots()) {
-            };
+       buildShots();
         
     }
 
@@ -431,8 +400,7 @@ public class CaptainPicard_test implements Captain, Constants {
      *
      */
     //hit ship. went right. missed. went bottom of 3 to last shot (shot before the hit);
-    private boolean buildShots() {
-        boolean goagain = false;
+    private void buildShots() {
         this.availableShots.clear();
         //System.out.println("building some shots!");
         //indicies of available shots that are 1 away form a hit
@@ -442,101 +410,96 @@ public class CaptainPicard_test implements Captain, Constants {
             	//System.out.println("hitting a ship");
                 String[] curShip = this.hitShips.get(i);
                 //System.out.println("ship left: "+i);
-                //check to make sure ship can fit in that direction if there is only one hit (check "f"'s)
-                int fes = 0;
-                for (String s : curShip) {
-                    if (s.equals("f")) {
-                        fes++;
-                    }
-                }
+                //check to make sure ship can fit in that direction if there is only one hit
+                int ship_left = Integer.parseInt(curShip[3]);
 
-                //if the ship has only been hit once
-                if (fes == curShip.length - 3) {
+                //if the ship has only been hit once, no additional numbers.
+                if (curShip[4].equals("0")) {
                     //System.out.println("ship was only hit once");
                     //right-left
                     
-                    int y = Integer.parseInt(curShip[1]);
-                    boolean moreright = true;
-                    boolean moreleft = true;
-                    int avcoords = 0;
-                    for (int b = 1; b <= fes; b++) {
-                        if (moreright && checkCoord(Integer.parseInt(curShip[2]) + b, y) ) {
-                            //System.out.println("I can go one more to the right");
-                            this.availableShots.add(new Coordinate(Integer.parseInt(curShip[2]) + b, y));
-                            avcoords++;
-                            if (b == 1) {
-                                oneAways.add(this.availableShots.size() - 1);
-                            }
-                        } else {
-                            moreright = false;
-                        }
-                        if (moreleft && checkCoord(Integer.parseInt(curShip[2]) - b, y) ) {
-                            //System.out.println("I can go one more to the left");
-                            this.availableShots.add(new Coordinate(Integer.parseInt(curShip[2]) - b, y));
-                            avcoords++;
-                            if (b == 1) {
-                                oneAways.add(this.availableShots.size() - 1);
-                            }
-                        } else {
-                            moreleft = false;
-                        }
-                    }
-                    if (avcoords < fes) {
-                        //System.out.println("There was not enough space for the ship this way");
-                        for (int d = 0; d < avcoords; d++) {
-                            if (oneAways.contains(this.availableShots.size() - 1)) {
-                                oneAways.remove((Integer) (this.availableShots.size() - 1));
-                            }
-                            this.availableShots.remove(this.availableShots.size() - 1);
-
-                        }
-
-                    }
-
-                    curShip[0] = "1";
-                    String middle = curShip[1];
-                    curShip[1] = curShip[2];
-                    curShip[2] = middle;
-                    
+                    int y = Integer.parseInt(curShip[2]);
                     int x = Integer.parseInt(curShip[1]);
-                    boolean moreup = true;
-                    boolean moredown = true;
-                    avcoords = 0;
-                    for (int b = 1; b <= fes; b++) {
-                        if (checkCoord(x, Integer.parseInt(curShip[2]) + b) && moredown) {
-                            this.availableShots.add(new Coordinate(x, Integer.parseInt(curShip[2]) + b));
-                            avcoords++;
-                            if (b == 1) {
-                                oneAways.add(this.availableShots.size() - 1);
-                            }
-                        } else {
-                            moredown = false;
-                        }
-                        if (checkCoord(x, Integer.parseInt(curShip[2]) - b) && moreup) {
-                            this.availableShots.add(new Coordinate(x, Integer.parseInt(curShip[2]) - b));
-                            avcoords++;
-                            if (b == 1) {
-                                oneAways.add(this.availableShots.size() - 1);
-                            }
-                        } else {
-                            moreup = false;
-                        }
+                    int rspaces = 0;
+                    int lspaces = 0;
+                    int tspaces = 0;
+                    int bspaces = 0;
+                    
+                    for( int j = -1; j<2; j += 2){
+	                    if( checkCoord(x+(1*j),y)){
+	                    	if( j == -1)
+	                    		lspaces++;
+	                    	else
+	                    		rspaces++;
+	                    	if( (ship_left > 1) && checkCoord(x+(2*j),y)){
+		                    	if( j == -1)
+		                    		lspaces++;
+		                    	else
+		                    		rspaces++;
+	                    		if( (ship_left > 2) && checkCoord(x+(3*j),y)){
+	    	                    	if( j == -1)
+	    	                    		lspaces++;
+	    	                    	else
+	    	                    		rspaces++;
+	                    			if( (ship_left > 3) && checkCoord(x+(4*j),y)){
+	        	                    	if( j == -1)
+	        	                    		lspaces++;
+	        	                    	else
+	        	                    		rspaces++;	                    				
+	                    			}
+	                    		}
+	                    	}
+	                    }
                     }
-                    if (avcoords < fes) {
+                    for( int j = -1; j<2; j += 2){
+	                    if( checkCoord(x,y+(1*j))){
+	                    	if( j == -1)
+	                    		tspaces++;
+	                    	else
+	                    		bspaces++;
+	                    	if( (ship_left > 1) && checkCoord(x,y+(2*j))){
+		                    	if( j == -1)
+		                    		tspaces++;
+		                    	else
+		                    		bspaces++;
+	                    		if( (ship_left > 2) && checkCoord(x,y+(3*j))){
+	    	                    	if( j == -1)
+	    	                    		tspaces++;
+	    	                    	else
+	    	                    		bspaces++;
+	                    			if( (ship_left > 3) && checkCoord(x,y+(4*j))){
+	        	                    	if( j == -1)
+	        	                    		tspaces++;
+	        	                    	else
+	        	                    		bspaces++;	                    				
+	                    			}
+	                    		}
+	                    	}
+	                    }
+                    }
+                    
+                    Coordinate hor = null;
+                    Coordinate vert = null;
+                    this.cur_hor = 0;
+                    this.cur_ver = 0;
+                    if( (rspaces + lspaces) >= ship_left ){
                     	
-                        for (int d = 0; d < avcoords; d++) {
-                            if (oneAways.contains(this.availableShots.size() - 1)) {
-                                oneAways.remove((Integer) (this.availableShots.size() - 1));
-                            }
-                            this.availableShots.remove(this.availableShots.size() - 1);
-                        }
-
-
+                    	hor = find_best_fit(x,y,lspaces, rspaces, ship_left, 0);
                     }
-                    curShip[0] = "0";
-                    middle = curShip[1];
-                    curShip[1] = curShip[2];
-                    curShip[2] = middle;
+
+                    if( (tspaces + bspaces) >= ship_left){
+                    	
+                    	vert = find_best_fit(x,y,tspaces, bspaces, ship_left, 1);
+                    }
+    
+                    System.out.println(this.cur_hor + " horu");
+                    System.out.println(this.cur_ver + " vert");
+                    if( this.cur_ver > this.cur_hor){
+                    	this.availableShots.add(0, new Coordinate(vert.getX(), vert.getY()));
+                    }
+                    else{
+                    	this.availableShots.add(0, new Coordinate(hor.getX(), hor.getY()));
+                    }
 
                 }
                 
@@ -544,62 +507,84 @@ public class CaptainPicard_test implements Captain, Constants {
                  //already hit more than once, add which shots you can still make
                 else {
                     //System.out.println("ship's been hit more than once");
-                    int min = Integer.parseInt(curShip[2]);
-                    int max = Integer.parseInt(curShip[2]);
-                    for (int ah = 3; ah < curShip.length; ah++) {
-                        if (!curShip[ah].equals("f")) {
-                            if (Integer.parseInt(curShip[ah]) < min) {
-                                min = Integer.parseInt(curShip[ah]);
-                            }
-                            if (Integer.parseInt(curShip[ah]) > max) {
-                                max = Integer.parseInt(curShip[ah]);
-                            }
-                        }
-                    }
-                    //horizontal
-                    if (curShip[0].equals("0")) {
-                    	//System.out.println("ship is horizontal");
-                        int y = Integer.parseInt(curShip[1]);
-                        if (checkCoord(min - 1, y)) {
-                            this.availableShots.add(new Coordinate(min - 1, y));
-                            oneAways.add(this.availableShots.size() - 1);
-                        }
-                        if (checkCoord(max + 1, y)) {
-                            this.availableShots.add(new Coordinate(max + 1, y));
-                            oneAways.add(this.availableShots.size() - 1);
-                        }
-                    } 
-                    //verticle
-                    else {
-                    	//System.out.println("ship is verticle");
-                        int x = Integer.parseInt(curShip[1]);
-                        if (checkCoord(x, min - 1)) {
-                            this.availableShots.add(new Coordinate(x, min - 1));
-                            oneAways.add(this.availableShots.size() - 1);
-                        }
-                        if (checkCoord(x, max + 1)) {
-                            this.availableShots.add(new Coordinate(x, max + 1));
-                            oneAways.add(this.availableShots.size() - 1);
-                        }
-                    }
+                	if( curShip[0] == "1"){
+                		
+                	}
+                	else{
+                		
+                	}
+
                 }
 
                 //else you can do nothing
                 //else switch direction and add those spots to possible hits.
 
             }
+            
         }
         //System.out.println(this.availableShots);
-        for (Integer index : oneAways) {
-            if (this.avgHeat[this.availableShots.get(index).getX()][this.availableShots.get(index).getY()] > this.avgHeat[this.availableShots.get(0).getX()][this.availableShots.get(0).getY()]) {
-                this.availableShots.add(0, this.availableShots.remove(index.intValue()));
-            }
-        }
+        
 
-        return goagain;
     }
 
-    /**
+    private Coordinate find_best_fit(int x, int y, int neg_spaces, int pos_spaces, int needed_spaces, int i) {
+
+    	//horizontal
+    	if( i == 0){
+    		double best_rect_val = 0;
+    		Coordinate best_rect_start = new Coordinate(0,0);
+    		for( int j = (x - neg_spaces); j< ( x + pos_spaces - needed_spaces); j++){
+    			double rect_value = 0;
+    			for( int k = 0; k<needed_spaces; k++){
+    				rect_value += ( this.avgHeat[k+j][y] * this.heatFactor);
+    			}
+    			
+    			if( rect_value > best_rect_val ){
+    				best_rect_val = rect_value;
+    				best_rect_start = new Coordinate(j, y); //rect contnues in +x direction
+    			}
+    		}
+    		this.cur_hor = best_rect_val;
+    		if( best_rect_start.getX() < (x-1)){
+    			return new Coordinate(x-1, y);
+    		}
+    		else if(pos_spaces >0){
+    			return new Coordinate( x+1, y);
+    		}
+    		else{
+    			return new Coordinate(x-1, y);
+    		}    		
+    	}
+    	//verticle
+    	else{
+    		double best_rect_val = 0;
+    		Coordinate best_rect_start = new Coordinate(0,0);
+    		for( int j = (y - neg_spaces); j< ( y + pos_spaces - needed_spaces); j++){
+    			double rect_value = 0;
+    			for( int k = 0; k<needed_spaces; k++){
+    				rect_value += ( this.avgHeat[x][k+j] * this.heatFactor);
+    			}
+    			
+    			if( rect_value > best_rect_val ){
+    				best_rect_val = rect_value;
+    				best_rect_start = new Coordinate(x, j); //rect contnues in +x direction
+    			}
+    		}
+    		this.cur_ver = best_rect_val;
+    		
+    		if( best_rect_start.getY() < (x-1)){
+    			return new Coordinate(x, y-1);
+    		}
+    		else if(pos_spaces >0){
+    			return new Coordinate( x, y+1);
+    		}
+    		else{
+    			return new Coordinate(x, y-1);
+    		}  
+    	}
+	}
+
+	/**
      * TODO Put here a description of what this method does.
      *
      * @param i
