@@ -351,11 +351,12 @@ public class CaptainPicard_test implements Captain, Constants {
                 if (this.hitShips.get(result % 10) != null) {
                 	//ship is verticle
                 	this.hitShips.get(result % 10)[4] = String.valueOf( Integer.parseInt(this.hitShips.get(result % 10)[4]) + 1);
-                	
+                	this.hitShips.get(result % 10)[5] = "" + lastShot.getX();
+                	this.hitShips.get(result % 10)[6] = "" + lastShot.getY();
                     if (this.hitShips.get(result % 10)[0].equals("1")) {
                     	if( this.lastShot.getX() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
-                    		//System.out.println("line 348");
-                    		this.hitShips.get(result % 10)[0] = "0";             		
+                    		//if ship hit horizontal, but was supposed to be verticle, set to verticle.
+                    		this.hitShips.get(result % 10)[0] = "0";            		
                             
                     	}
                     	
@@ -364,21 +365,20 @@ public class CaptainPicard_test implements Captain, Constants {
                     else {
                     	if( this.lastShot.getY() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
                     		this.hitShips.get(result % 10)[0] = "1";
-                    	}
-                    	
+                    	}                    	
                     }
                 }
                 //ship never hit before
                 else {
                     int shipMod = result % 10;
                     if (shipMod == 0) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "1", "0"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "1", "0", "" + lastShot.getX(), "" + lastShot.getY()});
                     } else if (shipMod == 1 || shipMod == 2) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "2", "0"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "2", "0", "" + lastShot.getX(), "" + lastShot.getY()});
                     } else if (shipMod == 3) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "3", "0"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "3", "0",  "" + lastShot.getX(), "" + lastShot.getY()});
                     } else {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "4", "0"});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "4", "0",  "" + lastShot.getX(), "" + lastShot.getY()});
                     }
 
                 }
@@ -516,8 +516,7 @@ public class CaptainPicard_test implements Captain, Constants {
 
                 }
 
-                //else you can do nothing
-                //else switch direction and add those spots to possible hits.
+                //try to use find_best_fit method
 
             }
             
