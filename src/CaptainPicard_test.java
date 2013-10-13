@@ -22,6 +22,7 @@ public class CaptainPicard_test implements Captain, Constants {
     private int[] shipLength = {2, 3, 3, 4, 5};
     private ArrayList<Coordinate> availableShots = new ArrayList<Coordinate>();
     private Coordinate lastShot;
+    private Coordinate least_shots_coord;
     private String opponent;
     private String lastOpp = "";
     private Random rGen;
@@ -30,10 +31,14 @@ public class CaptainPicard_test implements Captain, Constants {
     private int matchTotal;
     private double cur_ver = 0;
     private double cur_hor = 0;
+    private int learning = 0;
+    private boolean was_learning;
+    private int turn_number;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
         this.lastShot = null;
+        this.turn_number = 0;
         this.matchTotal = numMatches;
         
         for (boolean[] b : this.theirGrid) {
@@ -57,6 +62,12 @@ public class CaptainPicard_test implements Captain, Constants {
             this.hitsHeat = new int[10][10];
             this.avgHeat = new double[10][10];
             this.lastOpp = opponent;
+            this.learning = 0;
+            this.was_learning = false;
+        }
+        //if learning, use smart pattern
+        if( this.was_learning){
+        	this.learning = 2;
         }
         //create a list of where my ships are
         for (boolean[] b : this.myShips) {
@@ -151,11 +162,11 @@ public class CaptainPicard_test implements Captain, Constants {
 
     @Override
     public Fleet getFleet() {
-        // TODO Auto-generated method stub.
         return this.myFleet;
     }
 
     private void shotHere(Coordinate c) {
+    	//System.out.println("the shot here: "+c);
         this.shotsHeat[c.getX()][c.getY()]++;
         this.theirGrid[c.getX()][c.getY()] = true;
     }
@@ -165,12 +176,69 @@ public class CaptainPicard_test implements Captain, Constants {
     	//System.out.println(this.hitShips);
         if (this.availableShots.size() > 0) {
             //System.out.println("there were available shots!");
+            //System.out.println("the shot: "+this.availableShots.get(0));
             this.lastShot = this.availableShots.get(0);
             this.availableShots.remove(0);
             shotHere(this.lastShot);
             return this.lastShot;
-        } else {
-            if (this.matchNumber > 50) {
+        } 
+        else if( learning > 1 ){
+        	boolean changed = false;
+        	int least_shots = this.shotsHeat[0][0];
+        	this.least_shots_coord = new Coordinate(0,0);
+        	for(int i = 0; i<100; i++){
+        		
+        		int x = i%10;
+        		int y = i/10;
+        		if( checkCoord(x, y) &&  this.shotsHeat[x][y] <= least_shots){
+        			least_shots = this.shotsHeat[x][y];
+        			least_shots_coord = new Coordinate(x,y);
+        			changed = true;
+        		}
+        	}
+        	
+        	if(changed){
+            	this.lastShot = new Coordinate( this.least_shots_coord.getX(), this.least_shots_coord.getY());
+            	shotHere(this.lastShot);
+            	return this.lastShot;
+        	}
+        	else{
+                Coordinate shot = makeEducatedShot();
+                this.lastShot = shot;
+                shotHere(shot);
+                return shot;
+        	}
+        }
+        else if( (this.matchNumber % 50 == 0) && (this.turn_number > 30) && (this.turn_number < 35) ) {
+        	boolean changed = false;
+        	int least_shots = this.shotsHeat[0][0];
+        	this.least_shots_coord = new Coordinate(0,0);
+        	for(int i = 0; i<100; i++){
+        		
+        		int x = i%10;
+        		int y = i/10;
+        		if( checkCoord(x, y) &&  this.shotsHeat[x][y] <= least_shots){
+        			least_shots = this.shotsHeat[x][y];
+        			least_shots_coord = new Coordinate(x,y);
+        			changed = true;
+        		}
+        	}
+        	
+        	if(changed){
+        		this.lastShot = new Coordinate( this.least_shots_coord.getX(), this.least_shots_coord.getY());
+            	shotHere(this.lastShot);
+            	return this.lastShot;
+        	}
+        	else{
+                Coordinate shot = makeEducatedShot();
+                this.lastShot = shot;
+                shotHere(shot);
+                return shot;
+        	}
+
+        }
+        else {
+            if (this.matchNumber > (.05 * this.matchTotal)) {
                 Coordinate shot = makeEducatedShot();
                 this.lastShot = shot;
                 shotHere(shot);
@@ -192,38 +260,132 @@ public class CaptainPicard_test implements Captain, Constants {
      */
     private Coordinate makeGuessShot() {
         // TODO Auto-generated method stub.
-        if (this.lastShot == null) {
-            int guess = rGen.nextInt(100);
-            while (!checkCoord(guess / 10, guess % 10)) {
-                guess = rGen.nextInt(100);
-            }
-            return new Coordinate(guess / 10, guess % 10);
+        if (this.turn_number == 0) {
+        	
+        	int best = 7;
+        	int best_x = 0;
+        	int best_y = 0;
+        	int x = 0;
+        	int y = 0;
+        	for( int i=0; i<5; i++){
+	            int guess = rGen.nextInt(100);
+	            x = guess / 10;
+	            y = guess % 10;
+	            
+	            if( this.matchNumber % 2 == 0){
+	            	if( ( (x % 2) == 0  && (y % 2) == 0) || ( (x % 2) == 1  && (y % 2) == 1) ){
+	            		x = (x+1) % 10;            		
+	            	}	  
+	            	
+	            	while(!checkCoord(x,y)){
+	            		guess = rGen.nextInt(100);
+	    	            x = guess / 10;
+	    	            y = guess % 10;	            		
+	            		if( ( (x % 2) == 0  && (y % 2) == 0) || ( (x % 2) == 1  && (y % 2) == 1) ){
+		            		x = (x+1) % 10;            		
+		            	}
+	            	}
+	            	
+	            	if( surroundCoord(new Coordinate(x,y)) < best){
+	            		best = surroundCoord(new Coordinate(x,y));
+	            		best_x = x;
+	            		best_y = y;
+	            	}
+	            }
+	            else{
+	            	if( ( (x % 2) == 1  && (y % 2) == 0) || ( (x % 2) == 0  && (y % 2) == 1) ){
+	            		y = (y+1) % 10;            		
+	            	}	  
+	            	
+	            	while(!checkCoord(x,y)){
+	            		guess = rGen.nextInt(100);
+	    	            x = guess / 10;
+	    	            y = guess % 10;	            		
+	            		if( ( (x % 2) == 1  && (y % 2) == 0) || ( (x % 2) == 0  && (y % 2) == 1) ){
+		            		y = (y+1) % 10;            		
+		            	}
+	            	}
+	            	
+	            	if( surroundCoord(new Coordinate(x,y)) < best){
+	            		best = surroundCoord(new Coordinate(x,y));
+	            		best_x = x;
+	            		best_y = y;
+	            	}
+	            }            
+        	}
+            return new Coordinate(best_x, best_y);
+            
         } else {
-            if (surroundCoord(this.lastShot) < 3) {
-                if (checkCoord(this.lastShot.getX() + 1, this.lastShot.getY() - 1)) {
-                    return new Coordinate(this.lastShot.getX() + 1, this.lastShot.getY() - 1);
-                } else if (checkCoord(this.lastShot.getX() + 1, this.lastShot.getY() + 1)) {
-                    return new Coordinate(this.lastShot.getX() + 1, this.lastShot.getY() + 1);
-                } else if (checkCoord(this.lastShot.getX() - 1, this.lastShot.getY() + 1)) {
-                    return new Coordinate(this.lastShot.getX() - 1, this.lastShot.getY() + 1);
-                } else if (checkCoord(this.lastShot.getX() - 1, this.lastShot.getY() - 1)) {
-                    return new Coordinate(this.lastShot.getX() - 1, this.lastShot.getY() - 1);
-                } else {
-                    int guess = rGen.nextInt(100);
-                    while (!checkCoord(guess / 10, guess % 10)) {
-                        guess = rGen.nextInt(100);
-                    }
-                    return new Coordinate(guess / 10, guess % 10);
-                }
-            } else {
-                int guess = rGen.nextInt(100);
-                while (!checkCoord(guess / 10, guess % 10)) {
-                    guess = rGen.nextInt(100);
-                }
-                return new Coordinate(guess / 10, guess % 10);
-            }
+        	int best = 7;
+        	int best_x = -1;
+        	int best_y = 0;
+        	int x = lastShot.getX();
+        	int y = lastShot.getY();
+        	
+        	if( (this.matchNumber % 2 == 0) && ((x % 2) != (y % 2) ) ){
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i ) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	else if((this.matchNumber % 2 == 0)){
+        		x = (x - 1) % 10;
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	else if( (this.lastShot.getX() % 2) == (this.lastShot.getY() % 2) ){
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        	}
+        	else{
+        		x = (x + 1) % 10;
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	
+        	if( best_x == -1){
+        		int z = this.rGen.nextInt(10);
+        		int q = this.rGen.nextInt(10);
+        		while( !checkCoord(z,q)){
+        			z = this.rGen.nextInt(10);
+            		q = this.rGen.nextInt(10);
+        		}
+        		return new Coordinate( z, q);
+        	}
+        	return new Coordinate(best_x, best_y);            
         }
-
     }
 
     /**
@@ -307,11 +469,47 @@ public class CaptainPicard_test implements Captain, Constants {
 
             }
         }
-
-        //apply factors
-        for (int q = 0; q < 100; q++) {
-            heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;
+        //now shift to a diagonal aligned with guess shot.
+        if( this.matchNumber % 2 == 1 ){
+        	for (int q = 0; q < 100; q++) {
+        		int x_temp = q % 10;
+        		int y_temp = q / 10;
+        		if ((x_temp % 2) != (y_temp %2)){ 
+        			heat[q % 10][q / 10] = 0;
+        		}
+            }
+        } else {
+        	for (int q = 0; q < 100; q++) {
+        		int x_temp = q % 10;
+        		int y_temp = q / 10;
+        		if ((x_temp % 2) == (y_temp %2)){ 
+        			heat[q % 10][q / 10] = 0;
+        		}
+            }
+        	
         }
+
+        //apply factors with surrounding coordinates
+        
+        for (int q = 0; q < 100; q++) {
+        	int sur = surroundCoord(new Coordinate(q % 10, q / 10));
+        	if( sur == 0 ){
+        		heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;
+        		
+        	}
+        	else if( sur < 3 ){
+        		heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor * .95;
+        	}
+        	else if( sur < 5 ){
+        		heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor * .9;
+        	}
+        	else{
+        		heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor * .85;
+        	}
+        		
+        }
+             
+        
         double best = 0;
         int bestX = 0;
         int bestY = 0;
@@ -322,6 +520,7 @@ public class CaptainPicard_test implements Captain, Constants {
                 bestY = q / 10;
             }
         }
+        
         //for method error possibility
         if (!checkCoord(bestX, bestY)) {
             return makeGuessShot();
@@ -338,6 +537,7 @@ public class CaptainPicard_test implements Captain, Constants {
      */
     @Override
     public void resultOfAttack(int result) {
+    	this.turn_number++;
         if( result != MISS ){
             this.hitsHeat[this.lastShot.getX()][this.lastShot.getY()]++;
             if (result >= 20) {
@@ -355,7 +555,7 @@ public class CaptainPicard_test implements Captain, Constants {
                 	this.hitShips.get(result % 10)[6] = "" + lastShot.getY();
                     if (this.hitShips.get(result % 10)[0].equals("1")) {
                     	if( this.lastShot.getX() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
-                    		//if ship hit horizontal, but was supposed to be verticle, set to verticle.
+                    		//if ship hit horizontal, but was supposed to be verticle, set to horizontal.
                     		this.hitShips.get(result % 10)[0] = "0";            		
                             
                     	}
@@ -363,7 +563,7 @@ public class CaptainPicard_test implements Captain, Constants {
                     } 
                     //horizontal
                     else {
-                    	if( this.lastShot.getY() != Integer.parseInt(this.hitShips.get(result % 10)[1])){
+                    	if( this.lastShot.getY() != Integer.parseInt(this.hitShips.get(result % 10)[2])){
                     		this.hitShips.get(result % 10)[0] = "1";
                     	}                    	
                     }
@@ -372,17 +572,39 @@ public class CaptainPicard_test implements Captain, Constants {
                 else {
                     int shipMod = result % 10;
                     if (shipMod == 0) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "1", "0", "" + lastShot.getX(), "" + lastShot.getY()});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "2", "1", "" + lastShot.getX(), "" + lastShot.getY()});
                     } else if (shipMod == 1 || shipMod == 2) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "2", "0", "" + lastShot.getX(), "" + lastShot.getY()});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "3", "1", "" + lastShot.getX(), "" + lastShot.getY()});
                     } else if (shipMod == 3) {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "3", "0",  "" + lastShot.getX(), "" + lastShot.getY()});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "4", "1",  "" + lastShot.getX(), "" + lastShot.getY()});
                     } else {
-                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "4", "0",  "" + lastShot.getX(), "" + lastShot.getY()});
+                        this.hitShips.set(shipMod, new String[]{"0", "" + lastShot.getX(), "" + lastShot.getY(), "5", "1",  "" + lastShot.getX(), "" + lastShot.getY()});
                     }
 
                 }
             }
+            
+            if( this.least_shots_coord != null){
+	        	if( this.lastShot.getX() == this.least_shots_coord.getX() && this.lastShot.getY() == this.least_shots_coord.getY()){
+	        		this.learning += 1;
+	        		this.was_learning = true;
+	        		//System.out.println("learning ai detected");
+	        	}
+        	}
+            
+        } else {
+        	if( this.least_shots_coord != null){
+	        	if( this.lastShot.getX() == this.least_shots_coord.getX() && this.lastShot.getY() == this.least_shots_coord.getY()){
+	        		//System.out.println("failed learning test");
+	        		this.learning -= 1;
+	        		this.least_shots_coord = null;
+	        		if( this.learning < 0 ){
+	        			this.was_learning = false;
+	        			//System.out.println("no longer learning");
+	        			this.learning = 1;
+	        		}
+	        	}
+        	}
         }
 
        buildShots();
@@ -399,22 +621,21 @@ public class CaptainPicard_test implements Captain, Constants {
      * @return
      *
      */
-    //hit ship. went right. missed. went bottom of 3 to last shot (shot before the hit);
     private void buildShots() {
         this.availableShots.clear();
         //System.out.println("building some shots!");
         //indicies of available shots that are 1 away form a hit
-        ArrayList<Integer> oneAways = new ArrayList<Integer>();
         for (int i = 0; i < 5; i++) {
             if (this.hitShips.get(i) != null) {
             	//System.out.println("hitting a ship");
                 String[] curShip = this.hitShips.get(i);
                 //System.out.println("ship left: "+i);
                 //check to make sure ship can fit in that direction if there is only one hit
-                int ship_left = Integer.parseInt(curShip[3]);
+                int ship_left = Integer.parseInt(curShip[3]) - Integer.parseInt(curShip[4]);
+                //System.out.println("Ship Left: "+ship_left);
 
                 //if the ship has only been hit once, no additional numbers.
-                if (curShip[4].equals("0")) {
+                if (curShip[4].equals("1")) {
                     //System.out.println("ship was only hit once");
                     //right-left
                     
@@ -424,9 +645,12 @@ public class CaptainPicard_test implements Captain, Constants {
                     int lspaces = 0;
                     int tspaces = 0;
                     int bspaces = 0;
+                    //System.out.println(curShip[0]+" "+curShip[1]+" "+curShip[2]+" "+curShip[3]+" "+curShip[4]+" "+curShip[5]+" "+curShip[6]);
                     
                     for( int j = -1; j<2; j += 2){
 	                    if( checkCoord(x+(1*j),y)){
+
+	                    	//System.out.println("x-1 was ok");
 	                    	if( j == -1)
 	                    		lspaces++;
 	                    	else
@@ -485,6 +709,7 @@ public class CaptainPicard_test implements Captain, Constants {
                     if( (rspaces + lspaces) >= ship_left ){
                     	
                     	hor = find_best_fit(x,y,lspaces, rspaces, ship_left, 0);
+                    	//System.out.println(hor);
                     }
 
                     if( (tspaces + bspaces) >= ship_left){
@@ -492,13 +717,21 @@ public class CaptainPicard_test implements Captain, Constants {
                     	vert = find_best_fit(x,y,tspaces, bspaces, ship_left, 1);
                     }
     
-                    System.out.println(this.cur_hor + " horu");
-                    System.out.println(this.cur_ver + " vert");
+                    //System.out.println(rspaces + " "+lspaces + " horu");
+                    //System.out.println(tspaces + " " + bspaces + " vert");
                     if( this.cur_ver > this.cur_hor){
                     	this.availableShots.add(0, new Coordinate(vert.getX(), vert.getY()));
                     }
-                    else{
+                    else if (this.cur_hor > this.cur_ver ){
                     	this.availableShots.add(0, new Coordinate(hor.getX(), hor.getY()));
+                    }
+                    else{
+                    	if (vert != null){
+                    		this.availableShots.add(0, new Coordinate(vert.getX(), vert.getY()));
+                    	}
+                    	else{
+                    		this.availableShots.add(0, new Coordinate(hor.getX(), hor.getY()));
+                    	}
                     }
 
                 }
@@ -506,24 +739,82 @@ public class CaptainPicard_test implements Captain, Constants {
 
                  //already hit more than once, add which shots you can still make
                 else {
+
+            		int ship_length = Integer.parseInt(curShip[3]);
                     //System.out.println("ship's been hit more than once");
-                	if( curShip[0] == "1"){
-                		
+                	if( curShip[0] == "0"){
+                		//shot was in +x direc
+                		int last_x = Integer.parseInt(curShip[5]);
+                		int last_y = Integer.parseInt(curShip[6]);
+                		int first_x = Integer.parseInt(curShip[1]);
+                		if( last_x > first_x ){
+                			if( (checkCoord(last_x+1, last_y)) && (last_x < (first_x + ship_length)) ){
+                				this.availableShots.add(0, new Coordinate(last_x+1, last_y));
+                			}
+                			//ship hit at both ends 
+                			else {
+                				for( int k = 0; k < Integer.parseInt(curShip[3]); k++ ){
+                					if(checkCoord( last_x-k,last_y )){
+                						this.availableShots.add(0, new Coordinate(last_x-k, last_y));
+                						break;
+                					}
+                				}
+                			}
+                		}
+                		//ship was hit in -x direction
+                		else{
+                			if( (checkCoord(last_x-1, last_y)) && (last_x > (first_x - ship_length)) ){
+                				this.availableShots.add(0, new Coordinate(last_x-1, last_y));
+                			}
+                			//ship hit at both ends 
+                			else {
+                				for( int k = 0; k < Integer.parseInt(curShip[3]); k++ ){
+                					if(checkCoord( last_x+k,last_y )){
+                						this.availableShots.add(0, new Coordinate(last_x+k, last_y));
+                						break;
+                					}
+                				}
+                			}
+                		}
                 	}
                 	else{
-                		
+                		//shot was in +y direc
+                		int last_x = Integer.parseInt(curShip[5]);
+                		int last_y = Integer.parseInt(curShip[6]);
+                		int first_y = Integer.parseInt(curShip[2]);
+                		if( last_y > first_y ){
+                			if( (checkCoord(last_x, last_y+1)) && (last_y < (first_y + ship_length)) ){
+                				this.availableShots.add(0, new Coordinate(last_x, last_y+1));
+                			}
+                			//ship hit at both ends 
+                			else {
+                				for( int k = 0; k < Integer.parseInt(curShip[3]); k++ ){
+                					if(checkCoord( last_x,last_y-k)){
+                						this.availableShots.add(0, new Coordinate(last_x, last_y-k));
+                						break;
+                					}
+                				}
+                			}
+                		}
+                		//ship was hit in -y direction
+                		else{
+                			if( (checkCoord(last_x, last_y-1)) && (last_y > (first_y - ship_length)) ){
+                				this.availableShots.add(0, new Coordinate(last_x, last_y-1));
+                			}
+                			//ship hit at both ends 
+                			else {
+                				for( int k = 0; k < Integer.parseInt(curShip[3]); k++ ){
+                					if(checkCoord( last_x,last_y+k )){
+                						this.availableShots.add(0, new Coordinate(last_x, last_y+k));
+                						break;
+                					}
+                				}
+                			}
+                		}
                 	}
-
                 }
-
-                //try to use find_best_fit method
-
-            }
-            
+            }            
         }
-        //System.out.println(this.availableShots);
-        
-
     }
 
     private Coordinate find_best_fit(int x, int y, int neg_spaces, int pos_spaces, int needed_spaces, int i) {
@@ -531,7 +822,14 @@ public class CaptainPicard_test implements Captain, Constants {
     	//horizontal
     	if( i == 0){
     		double best_rect_val = 0;
-    		Coordinate best_rect_start = new Coordinate(0,0);
+    		Coordinate best_rect_start = null;
+    		if( neg_spaces >0 ){
+    			best_rect_start = new Coordinate(x-1,y);
+    		}
+    		else{
+    			best_rect_start = new Coordinate(x+1,y);
+    		}
+    		
     		for( int j = (x - neg_spaces); j< ( x + pos_spaces - needed_spaces); j++){
     			double rect_value = 0;
     			for( int k = 0; k<needed_spaces; k++){
@@ -557,7 +855,13 @@ public class CaptainPicard_test implements Captain, Constants {
     	//verticle
     	else{
     		double best_rect_val = 0;
-    		Coordinate best_rect_start = new Coordinate(0,0);
+    		Coordinate best_rect_start = null;
+    		if( neg_spaces > 0 ){
+    			best_rect_start = new Coordinate(x,y-1);
+    		}
+    		else{
+    			best_rect_start = new Coordinate(x,y+1);
+    		}
     		for( int j = (y - neg_spaces); j< ( y + pos_spaces - needed_spaces); j++){
     			double rect_value = 0;
     			for( int k = 0; k<needed_spaces; k++){
@@ -571,7 +875,7 @@ public class CaptainPicard_test implements Captain, Constants {
     		}
     		this.cur_ver = best_rect_val;
     		
-    		if( best_rect_start.getY() < (x-1)){
+    		if( best_rect_start.getY() < (y-1)){
     			return new Coordinate(x, y-1);
     		}
     		else if(pos_spaces >0){
@@ -591,7 +895,6 @@ public class CaptainPicard_test implements Captain, Constants {
      * @return
      */
     private boolean checkCoord(int x, int y) {
-        // TODO Auto-generated method stub.
         if (x < 10 && y < 10 && x >= 0 && y >= 0) {
             if (!this.theirGrid[x][y]) {
                 return true;
@@ -600,7 +903,18 @@ public class CaptainPicard_test implements Captain, Constants {
 
         return false;
     }
+    private boolean checkCoord_test(int x, int y) {
+    	System.out.println("Checking Coordinate: "+x+","+y);
+        if (x < 10 && y < 10 && x >= 0 && y >= 0) {
+        	System.out.println("passed param1");
+            if (!this.theirGrid[x][y]) {
+            	System.out.println("passed param2 ret true");
+                return true;
+            }
+        }
 
+        return false;
+    }
     @Override
     public void opponentAttack(Coordinate coord) {
         // TODO Auto-generated method stub.
