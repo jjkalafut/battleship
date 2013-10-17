@@ -21,6 +21,7 @@ public class CaptainPicard implements Captain, Constants {
     private int[] shipLength = {2, 3, 3, 4, 5};
     private ArrayList<Coordinate> availableShots = new ArrayList<Coordinate>();
     private Coordinate lastShot;
+    private double heatFactor = 0;
     private String opponent;
     private String lastOpp = "";
     private Random rGen;
@@ -81,7 +82,7 @@ public class CaptainPicard implements Captain, Constants {
                 this.myFleet.placeShip(placement[0], placement[1], placement[2], shipType);
             }
         }
-
+        this.heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
     }
 
     private int[] leastShotPlace(int shipLen) {
@@ -304,8 +305,9 @@ public class CaptainPicard implements Captain, Constants {
 
         //apply factors
         for (int q = 0; q < 100; q++) {
-            heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * heatFactor;
+        	heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;        	   		
         }
+        
         double best = 0;
         int bestX = 0;
         int bestY = 0;

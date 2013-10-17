@@ -22,7 +22,6 @@ public class CaptainPicard_test implements Captain, Constants {
     private int[] shipLength = {2, 3, 3, 4, 5};
     private ArrayList<Coordinate> availableShots = new ArrayList<Coordinate>();
     private Coordinate lastShot;
-    private Coordinate least_shots_coord;
     private String opponent;
     private String lastOpp = "";
     private Random rGen;
@@ -31,8 +30,6 @@ public class CaptainPicard_test implements Captain, Constants {
     private int matchTotal;
     private double cur_ver = 0;
     private double cur_hor = 0;
-    private int learning = 0;
-    private boolean was_learning;
     private int turn_number;
 
     @Override
@@ -62,13 +59,8 @@ public class CaptainPicard_test implements Captain, Constants {
             this.hitsHeat = new int[10][10];
             this.avgHeat = new double[10][10];
             this.lastOpp = opponent;
-            this.learning = 0;
-            this.was_learning = false;
         }
-        //if learning, use smart pattern
-        if( this.was_learning){
-        	this.learning = 2;
-        }
+
         //create a list of where my ships are
         for (boolean[] b : this.myShips) {
             Arrays.fill(b, false);
@@ -182,63 +174,9 @@ public class CaptainPicard_test implements Captain, Constants {
             shotHere(this.lastShot);
             return this.lastShot;
         } 
-        else if( learning > 1 ){
-        	boolean changed = false;
-        	int least_shots = this.shotsHeat[0][0];
-        	this.least_shots_coord = new Coordinate(0,0);
-        	for(int i = 0; i<100; i++){
-        		
-        		int x = i%10;
-        		int y = i/10;
-        		if( checkCoord(x, y) &&  this.shotsHeat[x][y] <= least_shots){
-        			least_shots = this.shotsHeat[x][y];
-        			least_shots_coord = new Coordinate(x,y);
-        			changed = true;
-        		}
-        	}
-        	
-        	if(changed){
-            	this.lastShot = new Coordinate( this.least_shots_coord.getX(), this.least_shots_coord.getY());
-            	shotHere(this.lastShot);
-            	return this.lastShot;
-        	}
-        	else{
-                Coordinate shot = makeEducatedShot();
-                this.lastShot = shot;
-                shotHere(shot);
-                return shot;
-        	}
-        }
-        else if( (this.matchNumber % 50 == 0) && (this.turn_number > 30) && (this.turn_number < 35) ) {
-        	boolean changed = false;
-        	int least_shots = this.shotsHeat[0][0];
-        	this.least_shots_coord = new Coordinate(0,0);
-        	for(int i = 0; i<100; i++){
-        		
-        		int x = i%10;
-        		int y = i/10;
-        		if( checkCoord(x, y) &&  this.shotsHeat[x][y] <= least_shots){
-        			least_shots = this.shotsHeat[x][y];
-        			least_shots_coord = new Coordinate(x,y);
-        			changed = true;
-        		}
-        	}
-        	
-        	if(changed){
-        		this.lastShot = new Coordinate( this.least_shots_coord.getX(), this.least_shots_coord.getY());
-            	shotHere(this.lastShot);
-            	return this.lastShot;
-        	}
-        	else{
-                Coordinate shot = makeEducatedShot();
-                this.lastShot = shot;
-                shotHere(shot);
-                return shot;
-        	}
-
-        }
+       
         else {
-            if (this.matchNumber > (.05 * this.matchTotal)) {
+            if (this.matchNumber > (50)) {
                 Coordinate shot = makeEducatedShot();
                 this.lastShot = shot;
                 shotHere(shot);
@@ -260,7 +198,7 @@ public class CaptainPicard_test implements Captain, Constants {
      */
     private Coordinate makeGuessShot() {
         // TODO Auto-generated method stub.
-        if (this.turn_number == 0) {
+        if (this.lastShot == null) {
         	
         	int best = 7;
         	int best_x = 0;
@@ -376,13 +314,8 @@ public class CaptainPicard_test implements Captain, Constants {
         	}
         	
         	if( best_x == -1){
-        		int z = this.rGen.nextInt(10);
-        		int q = this.rGen.nextInt(10);
-        		while( !checkCoord(z,q)){
-        			z = this.rGen.nextInt(10);
-            		q = this.rGen.nextInt(10);
-        		}
-        		return new Coordinate( z, q);
+        		this.lastShot = null;
+        		return makeGuessShot();
         	}
         	return new Coordinate(best_x, best_y);            
         }
@@ -469,6 +402,7 @@ public class CaptainPicard_test implements Captain, Constants {
 
             }
         }
+        
         //now shift to a diagonal aligned with guess shot.
         if( this.matchNumber % 2 == 1 ){
         	for (int q = 0; q < 100; q++) {
@@ -584,27 +518,7 @@ public class CaptainPicard_test implements Captain, Constants {
                 }
             }
             
-            if( this.least_shots_coord != null){
-	        	if( this.lastShot.getX() == this.least_shots_coord.getX() && this.lastShot.getY() == this.least_shots_coord.getY()){
-	        		this.learning += 1;
-	        		this.was_learning = true;
-	        		//System.out.println("learning ai detected");
-	        	}
-        	}
             
-        } else {
-        	if( this.least_shots_coord != null){
-	        	if( this.lastShot.getX() == this.least_shots_coord.getX() && this.lastShot.getY() == this.least_shots_coord.getY()){
-	        		//System.out.println("failed learning test");
-	        		this.learning -= 1;
-	        		this.least_shots_coord = null;
-	        		if( this.learning < 0 ){
-	        			this.was_learning = false;
-	        			//System.out.println("no longer learning");
-	        			this.learning = 1;
-	        		}
-	        	}
-        	}
         }
 
        buildShots();
