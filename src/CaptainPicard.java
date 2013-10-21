@@ -10,44 +10,84 @@ import java.util.Random;
  */
 public class CaptainPicard implements Captain, Constants {
 
+	//where the opponent has shot
     private int[][] theirShots = new int[10][10];
-    private boolean[][] theirGrid = new boolean[10][10];
+    //a map of where i have hit ships
     private int[][] hitsHeat = new int[10][10];
+    //a map of where i have shot
     private int[][] shotsHeat = new int[10][10];
-    private double[][] avgHeat = new double[10][10];
-    private boolean[][] myShips = new boolean[10][10];
-    private ArrayList<String[]> hitShips;
-    private boolean[] enemyShips = new boolean[5];
+    // a map of where I have put my ships
+    private int[][] placeHeat = new int[10][10];
+    //an array of battleship lengths
     private int[] shipLength = {2, 3, 3, 4, 5};
-    private ArrayList<Coordinate> availableShots = new ArrayList<Coordinate>();
-    private Coordinate lastShot;
-    private double heatFactor = 0;
-    private String opponent;
-    private String lastOpp = "";
-    private Random rGen;
-    private Fleet myFleet;
+    //the current match number
     private int matchNumber = 0;
+    //the total number of matches being played
     private int matchTotal;
+    //a seed for ship placing
+    private int seed;
+    //current win rate
+    private int wins = 0;
+    //my heatmap
+    private double[][] avgHeat = new double[10][10];
+    //my heat factor
+    private double heatFactor = 0;    
+    //the best current horizontal enemy ship position
     private double cur_ver = 0;
+    //the best verticle enemy ship position
     private double cur_hor = 0;
+    //the grid that I am sooting on, to be sure i dont shoot the same spot twice
+    private boolean[][] theirGrid = new boolean[10][10];
+    //a map of where my ships are, used for placement
+    private boolean[][] myShips = new boolean[10][10];
+    //the status of the enemy ships 
+    private boolean[] enemyShips = new boolean[5];
+    //more detailed stats of the enemy ship
+    private ArrayList<String[]> hitShips;
+    //the shots that I can make (based on hitting ships)
+    private ArrayList<Coordinate> availableShots = new ArrayList<Coordinate>();
+    //the spot where i last fired
+    private Coordinate lastShot;   
+    //the name of my opponent
+    private String lastOpp = "";
+    // a random number generator
+    private Random rGen;
+    //my fleet object
+    private Fleet myFleet;
+
+
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
+    	
         this.lastShot = null;
         this.matchTotal = numMatches;
+        
+        //reset enemy grid
         for (boolean[] b : this.theirGrid) {
             Arrays.fill(b, false);
         }
         //true mens enemy ship is still alive
         Arrays.fill(this.enemyShips, true);
+        //reset hittign shits
         this.hitShips = new ArrayList<String[]>();
         for (int g = 0; g < 5; g++) {
             this.hitShips.add(null);
         }
-        //see if this is the same opponent, if so keep track of matches
-        this.opponent = opponent;
+        //Create a new generator
+        this.rGen = new Random();
+        //match count increment
         if (opponent.equals(this.lastOpp)) {
             this.matchNumber++;
+            if( this.matchNumber % 10000 == 0){
+            	double win_rate = (double) this.wins / (double) 10000;
+            	if( win_rate < .51){
+            		this.seed++;
+            		this.seed = this.seed % 3;
+            	}
+            	System.out.println("seed: "+this.seed);
+            	this.wins = 0;
+            }
         } //else reset all the opponent data
         else {
             this.theirShots = new int[10][10];
@@ -56,38 +96,580 @@ public class CaptainPicard implements Captain, Constants {
             this.hitsHeat = new int[10][10];
             this.avgHeat = new double[10][10];
             this.lastOpp = opponent;
+            this.seed = this.rGen.nextInt(3);
+            //reset where i've been placing ships
+            for (int[] b : this.placeHeat){
+            	Arrays.fill(b, 0);
+            }
+            
         }
-        //create a list of where my ships are
+        //reset a map of where my ships are
         for (boolean[] b : this.myShips) {
             Arrays.fill(b, false);
         }
-        //Create a new fleet
-        this.rGen = new Random();
+        
 
+        //make a new fleet
         this.myFleet = new Fleet();
-        for (int shipType = 0; shipType < 5; shipType++) {
-            boolean placed = false;
-            //if we don't have enough data on the opponent, randomly distribute the ships
-            if (this.matchNumber <= (numMatches / 100)) {
-                while (!placed) {
-                    int baseCoord = this.rGen.nextInt(100);
-                    placed = true;
-                    if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10, baseCoord / 10 - this.shipLength[shipType]), VERTICAL, shipType)) {
-                        if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10 - this.shipLength[shipType], baseCoord / 10), HORIZONTAL, shipType)) {
-                            placed = false;
-                        }
-                    }
-                }
-            } //else pot the ships where they have shot least
-            else {
-                int[] placement = leastShotPlace(this.shipLength[shipType]);
-                this.myFleet.placeShip(placement[0], placement[1], placement[2], shipType);
-            }
-        }
+        
+        placeShips();
+
         this.heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
     }
 
-    private int[] leastShotPlace(int shipLen) {
+    private void placeShips() {
+    	
+    	
+    	switch( this.seed ){
+    	
+    	//case 0: outerShipPlace(); break;
+    	case 0: evenDistributeTouchingPlace(); break;
+    	case 1: evenDistributePlace(); break;
+    	case 2: learningPlace(); break;
+    	//case 1: notTouchingPlace(); break;
+    	//case 1: notTouchingPlace(); break;
+    	//case 2: learningPlace(); break;
+    	//case 3: evenDistributePlace(); break;
+    	//case 4: learningPlace(); break;
+    	//case 5: evenDistributePlace(); break;
+    	//case 6: learningPlace(); break;
+    	//case 7: learningPlace(); break;
+    	//case 3: weightedRandomPlace(); break;
+    	//case 4: learningPlace(); break;
+    	//case 5: shipPlaceRandom(); break;
+    	//case 6: learningPlace(); break;
+    	//case 7: weightedRandomPlace(); break;
+    	//case 8: learningPlace(); break;
+    	//case 0: notTouchingPlace(); break;
+    	//case 1: learningPlace(); break;
+    	//case 2: outerShipPlace(); break;
+    	//case 3: weightedRandomPlace(); break;
+    	//case 4: shipPlaceRandom(); break;
+    	//case 5: learningPlace(); break;
+    	//case 6: notTouchingPlace(); break;
+    	//case 7: weightedRandomPlace(); break;
+    	//case 8: outerShipPlace(); break;
+    	//default: shipPlaceRandom(); break;
+    	//default: learningPlace(); break;
+    	//default: weightedRandomPlace(); break;
+    	//default: outerShipPlace(); break;
+    	//default: notTouchingPlace(); break;
+    	default: evenDistributeTouchingPlace(); break;    	
+    	
+    	}	
+    	
+    	if( !this.myFleet.isFleetReady()){
+    		System.out.println("Wasn't ready!!");
+    	}
+	}
+
+    private boolean placeShip(int x, int y, int direc, int shipType){
+    	
+    	if( this.myFleet.placeShip(x, y, direc, shipType)){
+    		int shipLen = this.shipLength[shipType];
+            if (direc == 0) {
+                for (int k = 0; k < shipLen; k++) {
+                    this.myShips[x + k][y] = true;
+                    this.placeHeat[x + k][y]++;
+                }
+            } else {
+                for (int k = 0; k < shipLen; k++) {
+                    this.myShips[x][y + k] = true;
+                    this.placeHeat[x][y+k]++;
+                }
+
+            }
+    		return true;
+    	}
+    	return false;
+    	
+    	
+    	
+    }
+    private boolean placeShip( Coordinate c, int direc, int shipType){
+    	int x = c.getX();
+    	int y = c.getY();
+    	if( this.myFleet.placeShip(x, y, direc, shipType)){
+    		int shipLen = this.shipLength[shipType];
+            if (direc == 0) {
+                for (int k = 0; k < shipLen; k++) {
+                    this.myShips[x + k][y] = true;
+                    this.placeHeat[x + k][y]++;
+                }
+            } else {
+                for (int k = 0; k < shipLen; k++) {
+                    this.myShips[x][y + k] = true;
+                    this.placeHeat[x][y+k]++;
+                }
+
+            }
+    		return true;
+    	}
+    	return false;
+    	
+    	
+    	
+    }
+    private boolean isShip(int x, int y){
+    	if( x < 10 && x>= 0 && y<10 && y >= 0){
+    		return this.myShips[x][y];
+    	}
+    	return false;
+    	
+    }
+    
+	private void shipPlaceRandom() {
+		for (int shipType = 0; shipType < 5; shipType++) {
+            boolean placed = false;
+            while (!placed) {
+                int baseCoord = this.rGen.nextInt(100);
+                placed = true;
+                if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10, baseCoord / 10 - this.shipLength[shipType]), VERTICAL, shipType)) {
+                    if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10 - this.shipLength[shipType], baseCoord / 10), HORIZONTAL, shipType)) {
+                        placed = false;
+                    }
+                }
+            }
+		}		
+	}
+
+	private void weightedRandomPlace() {
+		
+		for( int shipType = 0; shipType < 5; shipType++){
+			
+			Coordinate best_spot = new Coordinate( 0, 0);
+			
+			
+			int r = this.rGen.nextInt(100);
+			int x = r / 10;
+			int y = r % 10;
+			
+			double heat = this.matchTotal + 1;
+			for( int i = 0; i<5; i++){				
+				
+				while( isShip( x,y ) ){
+					r = this.rGen.nextInt(100);
+					x = r / 10;
+					y = r % 10;
+				}
+				
+				if ( this.theirShots[x][y] < heat){
+					heat = this.theirShots[x][y];
+					best_spot = new Coordinate( x, y);
+				}				
+			}
+			
+			int side = this.rGen.nextInt(2);
+			if ( side == 0 ){
+				if( !placeShip( best_spot, HORIZONTAL, shipType)){
+					if( !placeShip( best_spot.getX() - this.shipLength[shipType], best_spot.getY(), HORIZONTAL, shipType)){
+						if( !placeShip( best_spot, VERTICAL, shipType)){
+							if( !placeShip( best_spot.getX(),  best_spot.getY() + this.shipLength[shipType], VERTICAL, shipType)){
+								shipType --;
+							}
+						}
+					}
+				}
+			} else {
+				if( !placeShip( best_spot.getX(),  best_spot.getY() + this.shipLength[shipType], VERTICAL, shipType)){
+					if( !placeShip( best_spot, VERTICAL, shipType)){
+						if( !placeShip( best_spot.getX() - this.shipLength[shipType], best_spot.getY(), HORIZONTAL, shipType)){
+							if( !placeShip( best_spot, HORIZONTAL, shipType)){
+								shipType--;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+	}
+
+	private void outerShipPlace() {
+		for( int shipType = 0; shipType < 5; shipType++){
+			
+			int x = 0;
+			int y = 0;
+			
+			int r_3 = this.rGen.nextInt(4);
+			
+			if( r_3 == 0){
+				x = 9 - this.rGen.nextInt(4);
+				y = this.rGen.nextInt(10);
+				
+				if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
+					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
+						if( !placeShip( x ,y , VERTICAL, shipType)){
+							shipType --;
+						}
+					}
+				}
+				
+			} 
+			else if(r_3 == 1 ){
+				x = this.rGen.nextInt(10);
+				y = 9 - this.rGen.nextInt(4);
+				
+				if( !placeShip( x, y, HORIZONTAL, shipType)){
+					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
+						if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
+							shipType --;
+						}						
+					}
+				}
+			}
+			else if(r_3 == 2){
+				x = this.rGen.nextInt(4);
+				y = this.rGen.nextInt(10);
+				
+				if( !placeShip( x, y, VERTICAL, shipType)){
+					if( !placeShip( x ,y , HORIZONTAL, shipType)){
+						if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
+							if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
+								shipType --;
+							}
+						}
+					}
+				}
+			}
+			else{
+				x = this.rGen.nextInt(10);
+				y = this.rGen.nextInt(4);
+				
+				if( !placeShip( x, y, HORIZONTAL, shipType)){
+					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
+						if( !placeShip( x ,y , VERTICAL, shipType)){
+							if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
+								shipType --;
+							}
+						}
+					}
+				}
+			}		
+			
+		}
+		
+	}
+
+	private void learningPlace() {
+		for (int shipType = 0; shipType < 5; shipType++) {
+			int[] placement = leastShotPlace(this.shipLength[shipType]);
+            placeShip(placement[0], placement[1], placement[2], shipType);
+		}		
+	}
+
+	private void evenDistributePlace() {
+		
+		if( this.matchNumber > 100){
+			//a little random to avoid repeating same pattern
+			int r = this.rGen.nextInt(2);
+			
+			for( int shipType = 0; shipType<5; shipType++){
+				
+				int shipLen = this.shipLength[shipType];
+				int bestRect = -1;
+		        Coordinate rectCoord = null;
+		        
+				if( r == 1 ){					
+			        //try best verticle rectangle
+			        for (int i = 0; i < 10; i++) {
+			            for (int j = 0; j <= (10 - shipLen); j++) {
+			                int testRect = 0;
+			                boolean testOk = true;
+			                for (int k = 0; k < shipLen; k++) {
+	
+			                    if (this.myShips[i][j + k]) {
+			                        testOk = false;
+			                        break;
+			                    }
+			                    testRect = +this.placeHeat[i][j + k];
+			                }
+			                if (testOk && (bestRect == -1 || testRect < bestRect) ) {
+			                    bestRect = testRect;
+			                    rectCoord = new Coordinate(i, j);
+			                }
+			            }
+			        }
+			        
+				}
+		        else{
+					//try best horizontal rectangle
+			        for (int i = 0; i <= (10 - shipLen); i++) {
+			            for (int j = 0; j < (10); j++) {
+			                int testRect = 0;
+			                boolean testOk = true;
+			                for (int k = 0; k <shipLen; k++) {
+			                    if (this.myShips[i + k][j]) {
+			                        testOk = false;
+			                        break;
+			                    }
+			                    testRect = +this.placeHeat[i + k][j];
+			                }
+			                if ( testOk && (bestRect == -1 || testRect < bestRect) ) {
+			                    bestRect = testRect;
+			                    rectCoord = new Coordinate(i, j);
+			                }
+			            }
+			        }
+					
+				}
+				
+				//boolean return ignored. Should always be ok, since methods above check
+				placeShip(rectCoord.getX(), rectCoord.getY(), r, shipType);
+				
+			}
+		}else{
+			notTouchingPlace();
+		}
+		
+	}
+	private void evenDistributeTouchingPlace() {
+		
+		if( this.matchNumber > 100){
+			//a little random to avoid repeating same pattern
+			int r = this.rGen.nextInt(2);
+			
+			for( int shipType = 0; shipType<5; shipType++){
+				
+				int shipLen = this.shipLength[shipType];
+				int bestRect = -1;
+		        Coordinate rectCoord = null;
+		        
+				if( r == 1 ){					
+			        //try best verticle rectangle
+			        for (int i = 0; i < 10; i++) {
+			            for (int j = 0; j <= (10 - shipLen); j++) {
+			                int testRect = 0;
+			                boolean testOk = true;
+			                for (int k = 0; k < shipLen; k++) {
+	
+			                    if (this.myShips[i][j + k]) {
+			                        testOk = false;
+			                        break;
+			                    }
+			                    if( i == 0){
+			                    	if( this.myShips[i+1][j + k] ){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    else if( i == 9){
+			                    	if( this.myShips[i-1][j + k]){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    else{
+			                    	if( this.myShips[i+1][j + k] || this.myShips[i-1][j + k]){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    testRect = +this.placeHeat[i][j + k];
+			                }
+			                if (testOk && ( bestRect == -1 || testRect < bestRect) ) {
+			                    bestRect = testRect;
+			                    rectCoord = new Coordinate(i, j);
+			                }
+			            }
+			        }
+			        
+				}
+				if(bestRect == -1){
+					r = 0;
+				}
+		        if( r == 0 ){
+					//try best horizontal rectangle
+			        for (int i = 0; i <= (10 - shipLen); i++) {
+			            for (int j = 0; j < (10); j++) {
+			                int testRect = 0;
+			                boolean testOk = true;
+			                for (int k = 0; k <shipLen; k++) {
+			                    if (this.myShips[i + k][j]) {
+			                        testOk = false;
+			                        break;
+			                    }
+			                    if( j == 0 ){
+			                    	if( this.myShips[i + k][j+1] ){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    else if(j == 9){
+			                    	if(this.myShips[i + k][j-1] ){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    else{
+			                    	if( this.myShips[i + k][j+1] || this.myShips[i + k][j-1] ){
+			                    		testOk = false;
+				                        break;
+			                    	}
+			                    }
+			                    testRect = +this.placeHeat[i + k][j];
+			                }
+			                if ( testOk && (bestRect == -1 || testRect < bestRect) ) {
+			                    bestRect = testRect;
+			                    rectCoord = new Coordinate(i, j);
+			                }
+			            }
+			        }
+					
+				}
+				if(bestRect == -1){
+					r = 1;
+					shipType--;
+				}
+				else{
+					//boolean return ignored. Should always be ok, since methods above check
+					placeShip(rectCoord.getX(), rectCoord.getY(), r, shipType);
+				}
+				
+			}
+		}else{
+			notTouchingPlace();
+		}
+		
+	}
+	private void notTouchingPlace() {
+		for (int shipType = 0; shipType < 5; shipType++) {
+			boolean placed = false;
+			int t_counter = 0;
+			while(!placed){
+				
+				if( t_counter > 300 ){
+					int x = this.rGen.nextInt(10);
+					int y = this.rGen.nextInt(10);
+					int z = this.rGen.nextInt(2);
+					while( !this.myFleet.placeShip(x,  y,  z, shipType)){
+						x = this.rGen.nextInt(10);
+						y = this.rGen.nextInt(10);
+						z = this.rGen.nextInt(2);
+					}
+					placed = true;
+				}
+				else{
+					//true means that there are no touching ships
+					boolean surround = true;					
+					int x = this.rGen.nextInt(10);
+					int y = this.rGen.nextInt(10);
+					
+					if( x == 0 || x == 9 || y ==0 || y== 9){
+						if( x == 0 ){
+							//try y coords (up/down)
+							for( int i = 0; i < this.shipLength[shipType]; i++){
+								
+								if( isShip( x, y+i) || isShip( x+1, y+i)){
+									surround = false;
+									break;
+								}
+							}
+							if( isShip( x, y-1) || isShip(x , y + this.shipLength[shipType]) ){
+								surround = false;
+							}
+							if( surround && checkCoord(x, y) && checkCoord( x , y + this.shipLength[shipType] - 1 ) ){
+								if(placeShip(x, y, VERTICAL, shipType)){
+									placed = true;
+								}
+							}
+						}
+						else if(x==9){
+							//try y coords (up/down)
+							for( int i = 0; i < this.shipLength[shipType]; i++){
+								
+								if( isShip( x, y+i) || isShip(  x-1, y+i) ){
+									surround = false;
+									break;
+								}
+							}
+							if( isShip( x, y-1) || isShip(x , y + this.shipLength[shipType]) ){
+								surround = false;
+							}
+							if( surround && checkCoord(x, y) && checkCoord( x , y + this.shipLength[shipType] + 1 ) ){
+								if(placeShip(x, y, VERTICAL, shipType)){
+									placed = true;
+								}
+							}
+						}
+						else if(y == 0){
+							for( int i = 0; i < this.shipLength[shipType]; i++){
+								
+								if( isShip( x+i, y) || isShip(  x+i, y+1)){
+									surround = false;
+									break;
+								}
+							}
+							if( isShip( x-1, y) || isShip(x + this.shipLength[shipType], y) ){
+								surround = false;
+							}
+							if( surround && checkCoord(x, y) && checkCoord( x + this.shipLength[shipType] - 1 , y) ){
+								if(placeShip(x, y, HORIZONTAL, shipType)){
+									placed = true;
+								}
+							}
+						}
+						else{
+							for( int i = 0; i < this.shipLength[shipType]; i++){
+								
+								if( isShip( x + i, y) || isShip( x+i, y-1) ){
+									surround = false;
+									break;
+								}
+							}
+							if( isShip( x-1, y) || isShip(x + this.shipLength[shipType], y) ){
+								surround = false;
+							}
+							if( surround && checkCoord(x, y) && checkCoord( x + this.shipLength[shipType] - 1, y) ){
+								if(placeShip(x, y, HORIZONTAL, shipType)){
+									placed = true;
+								}
+							}
+						}
+					}	
+					else{
+						
+						//try x coords (right/left)
+						for( int i = 0; i < this.shipLength[shipType]; i++){
+							
+							if( isShip( x+i, y) || isShip(x+i, y-1) || isShip(x+i, y+1)){
+								surround = false;
+								break;
+							}
+						}
+						if( isShip(x-1, y) || isShip(x + this.shipLength[shipType], y) ){
+							surround = false;
+						}
+						if( surround && checkCoord(x, y) && checkCoord( x + this.shipLength[shipType] - 1, y) ){
+							if(placeShip(x, y, HORIZONTAL, shipType)){
+								placed = true;
+							}
+						}
+						//try y coords (up/down)
+						for( int i = 0; i < this.shipLength[shipType]; i++){
+							
+							if( isShip(x, y+i) || isShip(  x-1, y+i) || isShip( x+1, y+i)){
+								surround = false;
+								break;
+							}
+						}
+						if( isShip( x, y - 1) || isShip(x , y + this.shipLength[shipType]) ){
+							surround = false;
+						}
+						if( surround && checkCoord(x, y) && checkCoord( x , y + this.shipLength[shipType]-1) ){
+							if(placeShip(x, y, VERTICAL, shipType)){
+								placed = true;
+							}
+						}
+					}
+				}
+				
+				t_counter++;
+			}			
+		}		
+	}
+
+	private int[] leastShotPlace(int shipLen) {
         int bestRect = -1;
         Coordinate rectCoord = null;
         int orientation = 1;
@@ -96,15 +678,15 @@ public class CaptainPicard implements Captain, Constants {
             for (int j = 0; j <= (10 - shipLen); j++) {
                 int testRect = 0;
                 boolean testOk = true;
-                for (int k = shipLen - 1; k >= 0; k--) {
+                for (int k = 0; k < shipLen; k++) {
 
                     if (this.myShips[i][j + k]) {
                         testOk = false;
-                        continue;
+                        break;
                     }
                     testRect = +this.theirShots[i][j + k];
                 }
-                if ((bestRect == -1 || testRect < bestRect) && testOk) {
+                if (testOk && (bestRect == -1 || testRect < bestRect) ) {
                     bestRect = testRect;
                     rectCoord = new Coordinate(i, j);
                 }
@@ -112,17 +694,17 @@ public class CaptainPicard implements Captain, Constants {
         }
         //try best horizontal rectangle
         for (int i = 0; i <= (10 - shipLen); i++) {
-            for (int j = 0; j < 10; j++) {
+            for (int j = 0; j < (10); j++) {
                 int testRect = 0;
                 boolean testOk = true;
-                for (int k = shipLen - 1; k >= 0; k--) {
+                for (int k = 0; k <shipLen; k++) {
                     if (this.myShips[i + k][j]) {
                         testOk = false;
-                        continue;
+                        break;
                     }
                     testRect = +this.theirShots[i + k][j];
                 }
-                if (testRect < bestRect && testOk) {
+                if (testOk && testRect < bestRect ) {
                     bestRect = testRect;
                     rectCoord = new Coordinate(i, j);
                     orientation = 0;
@@ -133,16 +715,6 @@ public class CaptainPicard implements Captain, Constants {
 
         int[] ret = {rectCoord.getX(), rectCoord.getY(), orientation};
         //System.out.println(rectCoord.getX()+" "+rectCoord.getY()+" - "+orientation);
-        if (orientation == 0) {
-            for (int k = shipLen - 1; k >= 0; k--) {
-                this.myShips[rectCoord.getX() + k][rectCoord.getY()] = true;
-            }
-        } else {
-            for (int k = shipLen - 1; k >= 0; k--) {
-                this.myShips[rectCoord.getX()][rectCoord.getY() + k] = true;
-            }
-
-        }
         return ret;
     }
 
@@ -186,7 +758,9 @@ public class CaptainPicard implements Captain, Constants {
      * TODO Put here a description of what this method does.
      *
      * @return
+     * 
      */
+     
     private Coordinate makeGuessShot() {
         // TODO Auto-generated method stub.
         if (this.lastShot == null) {
@@ -223,6 +797,133 @@ public class CaptainPicard implements Captain, Constants {
 
     }
 
+
+    /**
+    private Coordinate makeGuessShot() {
+        // TODO Auto-generated method stub.
+        if (this.lastShot == null) {
+        	
+        	int best = 7;
+        	int best_x = 0;
+        	int best_y = 0;
+        	int x = 0;
+        	int y = 0;
+        	for( int i=0; i<5; i++){
+	            int guess = rGen.nextInt(100);
+	            x = guess / 10;
+	            y = guess % 10;
+	            
+	            if( this.matchNumber % 2 == 0){
+	            	if(  (x % 2) == (y % 2)  ){
+	            		x = (x+1) % 10;            		
+	            	}	  
+	            	
+	            	while(!checkCoord(x,y)){
+	            		guess = rGen.nextInt(100);
+	    	            x = guess / 10;
+	    	            y = guess % 10;	            		
+	            		if( (x % 2) == (y % 2) ){
+		            		x = (x+1) % 10;            		
+		            	}
+	            	}
+	            	
+	            	if( surroundCoord(new Coordinate(x,y)) < best){
+	            		best = surroundCoord(new Coordinate(x,y));
+	            		best_x = x;
+	            		best_y = y;
+	            	}
+	            }
+	            else{
+	            	if( (x % 2) != (y % 2) ){
+	            		y = (y+1) % 10;            		
+	            	}	  
+	            	
+	            	while(!checkCoord(x,y)){
+	            		guess = rGen.nextInt(100);
+	    	            x = guess / 10;
+	    	            y = guess % 10;	            		
+	            		if( (x % 2) != (y % 2) ){
+		            		y = (y+1) % 10;            		
+		            	}
+	            	}
+	            	
+	            	if( surroundCoord(new Coordinate(x,y)) < best){
+	            		best = surroundCoord(new Coordinate(x,y));
+	            		best_x = x;
+	            		best_y = y;
+	            	}
+	            }            
+        	}
+            return new Coordinate(best_x, best_y);
+            
+        } else {
+        	int best = 7;
+        	int best_x = -1;
+        	int best_y = 0;
+        	int x = lastShot.getX();
+        	int y = lastShot.getY();
+        	
+        	if( (this.matchNumber % 2 == 0) && ((x % 2) != (y % 2) ) ){
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i ) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	else if((this.matchNumber % 2 == 0)){
+        		x = (x - 1) % 10;
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	else if( (this.lastShot.getX() % 2) == (this.lastShot.getY() % 2) ){
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        	}
+        	else{
+        		x = (x + 1) % 10;
+        		
+        		for( int i = 0; i<10; i++){
+        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
+    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
+    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
+    	            		best_x = ( x+i ) % 10;
+    	            		best_y = ( y+i ) % 10;
+    	            	}
+        			}
+        		}
+        		
+        	}
+        	
+        	if( best_x == -1){
+        		this.lastShot = null;
+        		return makeGuessShot();
+        	}
+        	return new Coordinate(best_x, best_y);            
+        }
+    }
+    */
     /**
      * TODO Put here a description of what this method does.
      *
@@ -306,22 +1007,30 @@ public class CaptainPicard implements Captain, Constants {
         }
 
         //apply factors
-        for (int q = 0; q < 100; q++) {
-        	heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;        	   		
-        }
-        
         double best = 0;
         int bestX = 0;
         int bestY = 0;
+        
         for (int q = 0; q < 100; q++) {
-            if (heat[q % 10][q / 10] > best) {
+        	heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;  
+        	
+        	/**
+        	if( surroundCoord( new Coordinate(q % 10, q / 10)) > 4){
+        		heat[q % 10][q / 10] *= .8;
+        	}
+        	*/
+        	
+        	if (heat[q % 10][q / 10] > best) {
                 best = heat[q % 10][q / 10];
                 bestX = q % 10;
                 bestY = q / 10;
             }
         }
+        
+       
         //for method error possibility
         if (!checkCoord(bestX, bestY)) {
+        	System.out.println("got here :/");
             return makeGuessShot();
         }
         return new Coordinate(bestX, bestY);
@@ -384,8 +1093,8 @@ public class CaptainPicard implements Captain, Constants {
             
             
         }
-
-       buildShots();
+        
+        buildShots();
         
     }
 
@@ -594,6 +1303,8 @@ public class CaptainPicard implements Captain, Constants {
             }            
         }
     }
+    
+    
     private Coordinate find_best_fit(int x, int y, int neg_spaces, int pos_spaces, int needed_spaces, int i) {
 
     	//horizontal
@@ -692,6 +1403,9 @@ public class CaptainPicard implements Captain, Constants {
     @Override
     //recalculates the heat of each cell
     public void resultOfGame(int result) {
+    	if( result == WON ){
+    		this.wins++;
+    	}
         for (int i = 0; i < 100; i++) {
             if (this.shotsHeat[i / 10][i % 10] != 0) {
                 this.avgHeat[i / 10][i % 10] = (double) (this.hitsHeat[i / 10][i % 10]) / (double) (this.shotsHeat[i / 10][i % 10]);
