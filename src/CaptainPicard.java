@@ -85,7 +85,7 @@ public class CaptainPicard implements Captain, Constants {
             		this.seed++;
             		this.seed = this.seed % 3;
             	}
-            	System.out.println("seed: "+this.seed);
+            	//System.out.println("seed: "+this.seed);
             	this.wins = 0;
             }
         } //else reset all the opponent data
@@ -96,7 +96,7 @@ public class CaptainPicard implements Captain, Constants {
             this.hitsHeat = new int[10][10];
             this.avgHeat = new double[10][10];
             this.lastOpp = opponent;
-            this.seed = this.rGen.nextInt(3);
+            this.seed = 2;
             //reset where i've been placing ships
             for (int[] b : this.placeHeat){
             	Arrays.fill(b, 0);
@@ -961,8 +961,7 @@ public class CaptainPicard implements Captain, Constants {
     //make a shot based on enemy ship placements (covert intel)
 
     private Coordinate makeEducatedShot() {
-        double heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
-
+       
         double[][] heat = new double[10][10];
 
         for (int s = 0; s < 5; s++) {
@@ -1007,7 +1006,7 @@ public class CaptainPicard implements Captain, Constants {
         }
 
         //apply factors
-        double best = 0;
+        double best = -1;
         int bestX = 0;
         int bestY = 0;
         
@@ -1304,11 +1303,12 @@ public class CaptainPicard implements Captain, Constants {
         }
     }
     
-    
+    //only get called for a ship hit 1 time
     private Coordinate find_best_fit(int x, int y, int neg_spaces, int pos_spaces, int needed_spaces, int i) {
 
     	//horizontal
     	if( i == 0){
+
     		double best_rect_val = 0;
     		Coordinate best_rect_start = null;
     		if( neg_spaces >0 ){
@@ -1330,6 +1330,14 @@ public class CaptainPicard implements Captain, Constants {
     			}
     		}
     		this.cur_hor = best_rect_val;
+    		//ship pinning
+    		if( needed_spaces > neg_spaces){
+    			return new Coordinate( x+1, y);
+    		}
+    		else if( needed_spaces > pos_spaces ){
+    			return new Coordinate(x-1, y);
+    		}
+    		/////
     		if( best_rect_start.getX() < (x-1)){
     			return new Coordinate(x-1, y);
     		}
@@ -1342,6 +1350,7 @@ public class CaptainPicard implements Captain, Constants {
     	}
     	//verticle
     	else{
+    		
     		double best_rect_val = 0;
     		Coordinate best_rect_start = null;
     		if( neg_spaces > 0 ){
@@ -1363,6 +1372,14 @@ public class CaptainPicard implements Captain, Constants {
     		}
     		this.cur_ver = best_rect_val;
     		
+    		//ship pinning
+    		if( needed_spaces > neg_spaces){
+    			return new Coordinate( x, y+1);
+    		}
+    		else if( needed_spaces > pos_spaces){
+    			return new Coordinate(x, y-1);
+    		}
+    		//
     		if( best_rect_start.getY() < (y-1)){
     			return new Coordinate(x, y-1);
     		}
