@@ -85,7 +85,6 @@ public class CaptainPicard implements Captain, Constants {
             		this.seed++;
             		this.seed = this.seed % 3;
             	}
-            	//System.out.println("seed: "+this.seed);
             	this.wins = 0;
             }
         } //else reset all the opponent data
@@ -119,48 +118,13 @@ public class CaptainPicard implements Captain, Constants {
 
     private void placeShips() {
     	
-    	
     	switch( this.seed ){
-    	
-    	//case 0: outerShipPlace(); break;
     	case 0: evenDistributeTouchingPlace(); break;
     	case 1: evenDistributePlace(); break;
     	case 2: learningPlace(); break;
-    	//case 1: notTouchingPlace(); break;
-    	//case 1: notTouchingPlace(); break;
-    	//case 2: learningPlace(); break;
-    	//case 3: evenDistributePlace(); break;
-    	//case 4: learningPlace(); break;
-    	//case 5: evenDistributePlace(); break;
-    	//case 6: learningPlace(); break;
-    	//case 7: learningPlace(); break;
-    	//case 3: weightedRandomPlace(); break;
-    	//case 4: learningPlace(); break;
-    	//case 5: shipPlaceRandom(); break;
-    	//case 6: learningPlace(); break;
-    	//case 7: weightedRandomPlace(); break;
-    	//case 8: learningPlace(); break;
-    	//case 0: notTouchingPlace(); break;
-    	//case 1: learningPlace(); break;
-    	//case 2: outerShipPlace(); break;
-    	//case 3: weightedRandomPlace(); break;
-    	//case 4: shipPlaceRandom(); break;
-    	//case 5: learningPlace(); break;
-    	//case 6: notTouchingPlace(); break;
-    	//case 7: weightedRandomPlace(); break;
-    	//case 8: outerShipPlace(); break;
-    	//default: shipPlaceRandom(); break;
-    	//default: learningPlace(); break;
-    	//default: weightedRandomPlace(); break;
-    	//default: outerShipPlace(); break;
-    	//default: notTouchingPlace(); break;
-    	default: evenDistributeTouchingPlace(); break;    	
-    	
+    	default: evenDistributeTouchingPlace(); break;      	
     	}	
-    	
-    	if( !this.myFleet.isFleetReady()){
-    		System.out.println("Wasn't ready!!");
-    	}
+
 	}
 
     private boolean placeShip(int x, int y, int direc, int shipType){
@@ -186,30 +150,7 @@ public class CaptainPicard implements Captain, Constants {
     	
     	
     }
-    private boolean placeShip( Coordinate c, int direc, int shipType){
-    	int x = c.getX();
-    	int y = c.getY();
-    	if( this.myFleet.placeShip(x, y, direc, shipType)){
-    		int shipLen = this.shipLength[shipType];
-            if (direc == 0) {
-                for (int k = 0; k < shipLen; k++) {
-                    this.myShips[x + k][y] = true;
-                    this.placeHeat[x + k][y]++;
-                }
-            } else {
-                for (int k = 0; k < shipLen; k++) {
-                    this.myShips[x][y + k] = true;
-                    this.placeHeat[x][y+k]++;
-                }
 
-            }
-    		return true;
-    	}
-    	return false;
-    	
-    	
-    	
-    }
     private boolean isShip(int x, int y){
     	if( x < 10 && x>= 0 && y<10 && y >= 0){
     		return this.myShips[x][y];
@@ -217,139 +158,6 @@ public class CaptainPicard implements Captain, Constants {
     	return false;
     	
     }
-    
-	private void shipPlaceRandom() {
-		for (int shipType = 0; shipType < 5; shipType++) {
-            boolean placed = false;
-            while (!placed) {
-                int baseCoord = this.rGen.nextInt(100);
-                placed = true;
-                if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10, baseCoord / 10 - this.shipLength[shipType]), VERTICAL, shipType)) {
-                    if (!this.myFleet.placeShip(new Coordinate(baseCoord % 10 - this.shipLength[shipType], baseCoord / 10), HORIZONTAL, shipType)) {
-                        placed = false;
-                    }
-                }
-            }
-		}		
-	}
-
-	private void weightedRandomPlace() {
-		
-		for( int shipType = 0; shipType < 5; shipType++){
-			
-			Coordinate best_spot = new Coordinate( 0, 0);
-			
-			
-			int r = this.rGen.nextInt(100);
-			int x = r / 10;
-			int y = r % 10;
-			
-			double heat = this.matchTotal + 1;
-			for( int i = 0; i<5; i++){				
-				
-				while( isShip( x,y ) ){
-					r = this.rGen.nextInt(100);
-					x = r / 10;
-					y = r % 10;
-				}
-				
-				if ( this.theirShots[x][y] < heat){
-					heat = this.theirShots[x][y];
-					best_spot = new Coordinate( x, y);
-				}				
-			}
-			
-			int side = this.rGen.nextInt(2);
-			if ( side == 0 ){
-				if( !placeShip( best_spot, HORIZONTAL, shipType)){
-					if( !placeShip( best_spot.getX() - this.shipLength[shipType], best_spot.getY(), HORIZONTAL, shipType)){
-						if( !placeShip( best_spot, VERTICAL, shipType)){
-							if( !placeShip( best_spot.getX(),  best_spot.getY() + this.shipLength[shipType], VERTICAL, shipType)){
-								shipType --;
-							}
-						}
-					}
-				}
-			} else {
-				if( !placeShip( best_spot.getX(),  best_spot.getY() + this.shipLength[shipType], VERTICAL, shipType)){
-					if( !placeShip( best_spot, VERTICAL, shipType)){
-						if( !placeShip( best_spot.getX() - this.shipLength[shipType], best_spot.getY(), HORIZONTAL, shipType)){
-							if( !placeShip( best_spot, HORIZONTAL, shipType)){
-								shipType--;
-							}
-						}
-					}
-				}
-			}
-		}
-		
-	}
-
-	private void outerShipPlace() {
-		for( int shipType = 0; shipType < 5; shipType++){
-			
-			int x = 0;
-			int y = 0;
-			
-			int r_3 = this.rGen.nextInt(4);
-			
-			if( r_3 == 0){
-				x = 9 - this.rGen.nextInt(4);
-				y = this.rGen.nextInt(10);
-				
-				if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
-					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
-						if( !placeShip( x ,y , VERTICAL, shipType)){
-							shipType --;
-						}
-					}
-				}
-				
-			} 
-			else if(r_3 == 1 ){
-				x = this.rGen.nextInt(10);
-				y = 9 - this.rGen.nextInt(4);
-				
-				if( !placeShip( x, y, HORIZONTAL, shipType)){
-					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
-						if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
-							shipType --;
-						}						
-					}
-				}
-			}
-			else if(r_3 == 2){
-				x = this.rGen.nextInt(4);
-				y = this.rGen.nextInt(10);
-				
-				if( !placeShip( x, y, VERTICAL, shipType)){
-					if( !placeShip( x ,y , HORIZONTAL, shipType)){
-						if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
-							if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
-								shipType --;
-							}
-						}
-					}
-				}
-			}
-			else{
-				x = this.rGen.nextInt(10);
-				y = this.rGen.nextInt(4);
-				
-				if( !placeShip( x, y, HORIZONTAL, shipType)){
-					if( !placeShip( x - this.shipLength[shipType], y, HORIZONTAL, shipType)){
-						if( !placeShip( x ,y , VERTICAL, shipType)){
-							if( !placeShip( x,  y - this.shipLength[shipType], VERTICAL, shipType)){
-								shipType --;
-							}
-						}
-					}
-				}
-			}		
-			
-		}
-		
-	}
 
 	private void learningPlace() {
 		for (int shipType = 0; shipType < 5; shipType++) {
@@ -720,7 +528,6 @@ public class CaptainPicard implements Captain, Constants {
 
     @Override
     public Fleet getFleet() {
-        // TODO Auto-generated method stub.
         return this.myFleet;
     }
 
@@ -754,13 +561,6 @@ public class CaptainPicard implements Captain, Constants {
 
     }
 
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     * @return
-     * 
-     */
-     
     private Coordinate makeGuessShot() {
         // TODO Auto-generated method stub.
         if (this.lastShot == null) {
@@ -796,140 +596,7 @@ public class CaptainPicard implements Captain, Constants {
         }
 
     }
-
-
-    /**
-    private Coordinate makeGuessShot() {
-        // TODO Auto-generated method stub.
-        if (this.lastShot == null) {
-        	
-        	int best = 7;
-        	int best_x = 0;
-        	int best_y = 0;
-        	int x = 0;
-        	int y = 0;
-        	for( int i=0; i<5; i++){
-	            int guess = rGen.nextInt(100);
-	            x = guess / 10;
-	            y = guess % 10;
-	            
-	            if( this.matchNumber % 2 == 0){
-	            	if(  (x % 2) == (y % 2)  ){
-	            		x = (x+1) % 10;            		
-	            	}	  
-	            	
-	            	while(!checkCoord(x,y)){
-	            		guess = rGen.nextInt(100);
-	    	            x = guess / 10;
-	    	            y = guess % 10;	            		
-	            		if( (x % 2) == (y % 2) ){
-		            		x = (x+1) % 10;            		
-		            	}
-	            	}
-	            	
-	            	if( surroundCoord(new Coordinate(x,y)) < best){
-	            		best = surroundCoord(new Coordinate(x,y));
-	            		best_x = x;
-	            		best_y = y;
-	            	}
-	            }
-	            else{
-	            	if( (x % 2) != (y % 2) ){
-	            		y = (y+1) % 10;            		
-	            	}	  
-	            	
-	            	while(!checkCoord(x,y)){
-	            		guess = rGen.nextInt(100);
-	    	            x = guess / 10;
-	    	            y = guess % 10;	            		
-	            		if( (x % 2) != (y % 2) ){
-		            		y = (y+1) % 10;            		
-		            	}
-	            	}
-	            	
-	            	if( surroundCoord(new Coordinate(x,y)) < best){
-	            		best = surroundCoord(new Coordinate(x,y));
-	            		best_x = x;
-	            		best_y = y;
-	            	}
-	            }            
-        	}
-            return new Coordinate(best_x, best_y);
-            
-        } else {
-        	int best = 7;
-        	int best_x = -1;
-        	int best_y = 0;
-        	int x = lastShot.getX();
-        	int y = lastShot.getY();
-        	
-        	if( (this.matchNumber % 2 == 0) && ((x % 2) != (y % 2) ) ){
-        		
-        		for( int i = 0; i<10; i++){
-        			if( checkCoord(  ( x+i ) % 10 , (y+i) % 10 )  ){
-    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
-    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
-    	            		best_x = ( x+i ) % 10;
-    	            		best_y = ( y+i ) % 10;
-    	            	}
-        			}
-        		}
-        		
-        	}
-        	else if((this.matchNumber % 2 == 0)){
-        		x = (x - 1) % 10;
-        		
-        		for( int i = 0; i<10; i++){
-        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
-    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
-    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
-    	            		best_x = ( x+i ) % 10;
-    	            		best_y = ( y+i ) % 10;
-    	            	}
-        			}
-        		}
-        		
-        	}
-        	else if( (this.lastShot.getX() % 2) == (this.lastShot.getY() % 2) ){
-        		for( int i = 0; i<10; i++){
-        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
-    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
-    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
-    	            		best_x = ( x+i ) % 10;
-    	            		best_y = ( y+i ) % 10;
-    	            	}
-        			}
-        		}
-        	}
-        	else{
-        		x = (x + 1) % 10;
-        		
-        		for( int i = 0; i<10; i++){
-        			if( checkCoord(  ( x+i) % 10 , (y+i) % 10 )  ){
-    	            	if( surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10)) < best){
-    	            		best = surroundCoord(new Coordinate(( x+i) % 10,(y+i) % 10));
-    	            		best_x = ( x+i ) % 10;
-    	            		best_y = ( y+i ) % 10;
-    	            	}
-        			}
-        		}
-        		
-        	}
-        	
-        	if( best_x == -1){
-        		this.lastShot = null;
-        		return makeGuessShot();
-        	}
-        	return new Coordinate(best_x, best_y);            
-        }
-    }
-    */
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     * @param lastShot2
-     * @return
-     */
+    
     private int surroundCoord(Coordinate last) {
         int retVal = 0;
         if (!checkCoord(last.getX() + 1, last.getY() + 1)) {
@@ -958,8 +625,8 @@ public class CaptainPicard implements Captain, Constants {
         }
         return retVal;
     }
+    
     //make a shot based on enemy ship placements (covert intel)
-
     private Coordinate makeEducatedShot() {
        
         double[][] heat = new double[10][10];
@@ -1013,12 +680,6 @@ public class CaptainPicard implements Captain, Constants {
         for (int q = 0; q < 100; q++) {
         	heat[q % 10][q / 10] *= this.avgHeat[q % 10][q / 10] * this.heatFactor;  
         	
-        	/**
-        	if( surroundCoord( new Coordinate(q % 10, q / 10)) > 4){
-        		heat[q % 10][q / 10] *= .8;
-        	}
-        	*/
-        	
         	if (heat[q % 10][q / 10] > best) {
                 best = heat[q % 10][q / 10];
                 bestX = q % 10;
@@ -1027,21 +688,15 @@ public class CaptainPicard implements Captain, Constants {
         }
         
        
-        //for method error possibility
+        //for method error possibility (early game)
         if (!checkCoord(bestX, bestY)) {
-        	System.out.println("got here :/");
             return makeGuessShot();
         }
         return new Coordinate(bestX, bestY);
 
     }
 
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     * @param biggestSquare
-     * @return
-     */
+
     @Override
     public void resultOfAttack(int result) {
         if( result != MISS ){
@@ -1050,7 +705,6 @@ public class CaptainPicard implements Captain, Constants {
                 this.hitShips.set(result % 20, null);
                 this.availableShots.clear();
 
-                //System.out.println("I sunk a ship!");
             } 
             else {
             	//ship hit before
@@ -1097,32 +751,17 @@ public class CaptainPicard implements Captain, Constants {
         
     }
 
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     */
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     * @return
-     *
-     */
     private void buildShots() {
         this.availableShots.clear();
         //System.out.println("building some shots!");
         //indicies of available shots that are 1 away form a hit
         for (int i = 0; i < 5; i++) {
             if (this.hitShips.get(i) != null) {
-            	//System.out.println("hitting a ship");
                 String[] curShip = this.hitShips.get(i);
-                //System.out.println("ship left: "+i);
                 //check to make sure ship can fit in that direction if there is only one hit
                 int ship_left = Integer.parseInt(curShip[3]) - Integer.parseInt(curShip[4]);
-                //System.out.println("Ship Left: "+ship_left);
-
                 //if the ship has only been hit once, no additional numbers.
                 if (curShip[4].equals("1")) {
-                    //System.out.println("ship was only hit once");
                     //right-left
                     
                     int y = Integer.parseInt(curShip[2]);
@@ -1131,12 +770,10 @@ public class CaptainPicard implements Captain, Constants {
                     int lspaces = 0;
                     int tspaces = 0;
                     int bspaces = 0;
-                    //System.out.println(curShip[0]+" "+curShip[1]+" "+curShip[2]+" "+curShip[3]+" "+curShip[4]+" "+curShip[5]+" "+curShip[6]);
                     
                     for( int j = -1; j<2; j += 2){
 	                    if( checkCoord(x+(1*j),y)){
 
-	                    	//System.out.println("x-1 was ok");
 	                    	if( j == -1)
 	                    		lspaces++;
 	                    	else
@@ -1192,10 +829,10 @@ public class CaptainPicard implements Captain, Constants {
                     Coordinate vert = null;
                     this.cur_hor = 0;
                     this.cur_ver = 0;
+                    
                     if( (rspaces + lspaces) >= ship_left ){
                     	
                     	hor = find_best_fit(x,y,lspaces, rspaces, ship_left, 0);
-                    	//System.out.println(hor);
                     }
 
                     if( (tspaces + bspaces) >= ship_left){
@@ -1203,8 +840,6 @@ public class CaptainPicard implements Captain, Constants {
                     	vert = find_best_fit(x,y,tspaces, bspaces, ship_left, 1);
                     }
     
-                    //System.out.println(rspaces + " "+lspaces + " horu");
-                    //System.out.println(tspaces + " " + bspaces + " vert");
                     if( this.cur_ver > this.cur_hor){
                     	this.availableShots.add(0, new Coordinate(vert.getX(), vert.getY()));
                     }
@@ -1227,7 +862,6 @@ public class CaptainPicard implements Captain, Constants {
                 else {
 
             		int ship_length = Integer.parseInt(curShip[3]);
-                    //System.out.println("ship's been hit more than once");
                 	if( curShip[0] == "0"){
                 		//shot was in +x direc
                 		int last_x = Integer.parseInt(curShip[5]);
@@ -1392,15 +1026,7 @@ public class CaptainPicard implements Captain, Constants {
     	}
 	}
 
-    /**
-     * TODO Put here a description of what this method does.
-     *
-     * @param i
-     * @param y
-     * @return
-     */
     private boolean checkCoord(int x, int y) {
-        // TODO Auto-generated method stub.
         if (x < 10 && y < 10 && x >= 0 && y >= 0) {
             if (!this.theirGrid[x][y]) {
                 return true;
@@ -1412,9 +1038,7 @@ public class CaptainPicard implements Captain, Constants {
 
     @Override
     public void opponentAttack(Coordinate coord) {
-        // TODO Auto-generated method stub.
         this.theirShots[coord.getX()][coord.getY()]++;
-
     }
 
     @Override
