@@ -8,7 +8,7 @@ import java.util.Random;
  *
  * @author John. Created Mar 18, 2013.
  */
-public class CaptainMurica implements Captain, Constants {
+public class CaptainMurica_Improvement implements Captain, Constants {
 
 	//where the opponent has shot
     private int[][] theirShots = new int[10][10];

@@ -227,7 +227,35 @@ public class Mal implements Captain {
             } else {
                 return new Coordinate(hitX, hitY - 1);
             }
-        }
+        }/*
+         if (board[hitX][hitY].right + board[hitX][hitY].left + 1 >= shipLengths[ship]) {
+         if (board[hitX][hitY].right >= 1) {
+         maxValue = currentOpponent.shipProb(ship, hitX + 1, hitY);
+         toAttack.add(new Coordinate(hitX + 1, hitY));
+         }
+         if (board[hitX][hitY].left >= 1 && currentOpponent.shipProb(ship, hitX - 1, hitY) >= maxValue) {
+         if (currentOpponent.shipProb(ship, hitX - 1, hitY) > maxValue) {
+         toAttack = new LinkedList<>();
+         maxValue = currentOpponent.shipProb(ship, hitX - 1, hitY);
+         }
+         toAttack.add(new Coordinate(hitX - 1, hitY));
+         }
+         }
+         if (board[hitX][hitY].up + board[hitX][hitY].down + 1 >= shipLengths[ship]) {
+         if (board[hitX][hitY].up >= 1 && currentOpponent.shipProb(ship, hitX, hitY + 1) >= maxValue) {
+         if (currentOpponent.shipProb(ship, hitX, hitY + 1) > maxValue) {
+         toAttack = new LinkedList<>();
+         maxValue = currentOpponent.shipProb(ship, hitX, hitY + 1);
+         }
+         toAttack.add(new Coordinate(hitX, hitY + 1));
+         }
+         if (board[hitX][hitY].down >= 1 && currentOpponent.shipProb(ship, hitX, hitY - 1) >= maxValue) {
+         if (currentOpponent.shipProb(ship, hitX, hitY - 1) > maxValue) {
+         toAttack = new LinkedList<>();
+         }
+         toAttack.add(new Coordinate(hitX, hitY - 1));
+         }
+         }*/
         if (board[hitX][hitY].right >= maxValue && board[hitX + 1][hitY].status == UNATTACKED) {
             toAttack.add(new Coordinate(hitX + 1, hitY));
             maxValue = board[hitX][hitY].right;

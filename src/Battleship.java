@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.event.*;
@@ -79,7 +80,10 @@ public class Battleship extends JFrame implements Constants, ActionListener {
      * The color used for maximum values in the heat map
      */
     protected static final Color highColor = Color.RED;
-
+    /**
+     * these are samples used in the heatmap section.
+     */
+    private boolean hasRun = false;
     /**
      * The various 'states' of the GUI which provide different behavior.
      */
@@ -322,6 +326,41 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         attackHeatChart.setLowValueColour(blankColor);
 
         heatMapPanel = new JPanel(new GridBagLayout());
+        heatMapPanel.addMouseListener( new MouseListener(){
+
+			@Override
+			public void mouseClicked(MouseEvent arg0) {
+				if(hasRun){
+					makeHeatGUI();
+				}
+				
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent arg0) {
+				//do nothing
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent arg0) {
+				//do nothing
+				
+			}
+
+			@Override
+			public void mousePressed(MouseEvent arg0) {
+				//do nothing
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent arg0) {
+				//do nothing
+				
+			}
+        	
+        });
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(5, 5, 5, 5);
 
@@ -353,6 +392,16 @@ public class Battleship extends JFrame implements Constants, ActionListener {
 
         setSize(1000, 800);
         setVisible(true);
+    }
+    
+    protected void makeHeatGUI(){
+    	if (table.getSelectedRow() >= 0) {
+            String captainName = (String) table.getValueAt(table.getSelectedRow(), BattleshipTableModel.NAME_COLUMN_INDEX);
+        	CaptainStatistics stats = detailedRecords.get(captainName);
+        	@SuppressWarnings("unused")
+        	HeatGUI hg = new HeatGUI( stats.getSamples(), stats.getSampleNames(), captainName );
+        }
+    	
     }
 
     /**
@@ -418,6 +467,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
                 detailedRecords = new HashMap<>();
                 updateHeatCharts(null);
                 updateStatsText(null);
+                this.hasRun = false;
             }
 
         } // Begin the competition
@@ -644,7 +694,8 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         iterations.setEnabled(true);
         stopButton.setEnabled(false);
         opponentCombo.setEnabled(true);
-
+        
+        this.hasRun = true;
         // Reset progress back to 0
         totalProgressBar.setValue(0);
         currentProgressBar.setValue(0);
@@ -678,7 +729,6 @@ public class Battleship extends JFrame implements Constants, ActionListener {
                     "Not Enough Captains", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
         // Compute the number of total rounds for keeping track of progress
         int numberofrounds = numCaptains * numCaptains - numCaptains;
 
@@ -702,7 +752,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
                         return;
                     }
 
-                    // Update the progress bar
+                    
                     totalProgressBar.setValue((100 * counter) / numberofrounds);
                 }
             }
@@ -754,6 +804,13 @@ public class Battleship extends JFrame implements Constants, ActionListener {
             return false;
         }
 
+        int[][] startingOneAtk = detailedRecords.get(nameOne).getAttackPattern();
+        int[][] startingOnePlc = detailedRecords.get(nameOne).getShipPlacement();
+        
+        int[][] startingTwoAtk = detailedRecords.get(nameTwo).getAttackPattern();
+        int[][] startingTwoPlc = detailedRecords.get(nameTwo).getShipPlacement();
+        
+        int times_sampeled = 0;
         for (int i = 0; i < halfNumberOfMatches; i++) {
             // Initialize the first captain and his fleet
             captainone.initialize(2*halfNumberOfMatches, numCaptains, nameTwo);
@@ -866,8 +923,16 @@ public class Battleship extends JFrame implements Constants, ActionListener {
 
             // update the progress bar
             currentProgressBar.setValue((100 * (i + 1)) / halfNumberOfMatches);
+            
+         // Update the progress bar
+            if( (i + 1) % ( halfNumberOfMatches * .02) == 0){
+            	times_sampeled++;
+            	detailedRecords.get(nameOne).addSample(nameTwo, startingOneAtk, startingOnePlc );
+            	detailedRecords.get(nameTwo).addSample(nameOne, startingTwoAtk, startingTwoPlc );
+            }
         }
 
+        //System.out.println("Sampeled: "+times_sampeled);
         // Update the score model and repaint the table
         battleModel.addCaptainScore(nameOne, scoreOne);
         battleModel.addCaptainScore(nameTwo, scoreTwo);

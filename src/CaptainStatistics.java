@@ -1,5 +1,6 @@
 
 import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * <p>This class keeps track of how each captain is doing in the battle. It is
@@ -23,6 +24,8 @@ public class CaptainStatistics {
     private int losses;
     private int[][] shipPlacement;
     private int[][] attackPattern;
+    private ArrayList<ArrayList<int[][]>> heatSamples;
+    private ArrayList<String> oppNames;
     private String name;
 
     public CaptainStatistics(String name) {
@@ -30,6 +33,8 @@ public class CaptainStatistics {
         attackPattern = new int[10][10];
         shipPlacement = new int[10][10];
         opponents = new HashMap<>();
+        heatSamples = new ArrayList<ArrayList<int[][]>>();
+        oppNames = new ArrayList<String>();
     }
 
     public int[][] getShipPlacement() {
@@ -91,7 +96,41 @@ public class CaptainStatistics {
             System.err.printf("'%s' attacked '%s' out of bounds at the coordinate %s\n", name, opponent, attack.toString());
         }
     }
+    
+    public ArrayList<ArrayList<int[][]>> getSamples() {
+    	return this.heatSamples;
+    }
+    public ArrayList<String> getSampleNames(){
+    	return this.oppNames;
+    }
 
+    public void addSample( String oppName, int[][] oldAtk , int[][] oldPlace ){
+    	
+    	int[][] atkHeat = new int[10][10];
+    	int[][] curHeat = getAttackPattern();
+    	int[][] placeHeat = new int[10][10];
+    	int[][] curPlace = getShipPlacement();
+    	
+    	for( int i = 0; i< 100; i++){
+    		int x = i/10;
+    		int y = i%10;
+    		atkHeat[x][y] = curHeat[x][y] - oldAtk[x][y];
+    		placeHeat[x][y] = curPlace[x][y] - oldPlace[x][y];
+    	}
+    	//System.out.println("Old atk "+ oldAtk[4][5]);
+    	if( this.oppNames.contains(oppName)){
+    		this.heatSamples.get(this.oppNames.indexOf(oppName)).add(this.heatSamples.get(this.oppNames.indexOf(oppName)).size() / 2, atkHeat);
+    		this.heatSamples.get(this.oppNames.indexOf(oppName)).add( placeHeat);
+    	}else{
+    		this.oppNames.add(oppName);
+    		ArrayList<int[][]> temp = new ArrayList<int[][]>();
+    		temp.add(atkHeat);
+    		temp.add(placeHeat);
+    		this.heatSamples.add(temp);
+    	}
+    }
+    
+    
     public String getResultsAgainst(String opponent) {
         if (!opponents.containsKey(opponent)) {
             return null;
