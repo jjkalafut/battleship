@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 /**
- * TODO Put here a description of what this class does.
+ * This is the captain america battleship A.I. Be Afraid.
  *
  * @author John. Created Mar 18, 2013.
  */
@@ -64,7 +64,10 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     private int last_ship_losses;
     private int placeMethods = 4;
     private int[][] placementRate;
-
+    private int total_turns = 0;
+    private int longest_game = 0;
+    private int shortest_game = 100;
+    private int games_over_69 = 0;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -110,6 +113,7 @@ public class CaptainMurica_Improvement implements Captain, Constants {
             }
             
         }
+        //print out important stats at the end of each match
         if( this.matchNumber == this.matchTotal){
         	System.out.println("Average ships left for a loss: "+ ((double) this.ships_left / (double) (this.losses)));
         	System.out.println("% games lost on last ship: "+ ((double) this.last_ship_losses / (double) this.matchTotal));
@@ -133,6 +137,9 @@ public class CaptainMurica_Improvement implements Captain, Constants {
         this.heatFactor = 100.0 * (double) (this.matchNumber) / (double) (this.matchTotal);
     }
 
+    /**
+     * this method determines which placement strategy to use.
+     */
     private void determineSeed() {
 
     	double bestPlace = 0;
@@ -151,7 +158,11 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     	}
 		
 	}
-
+    
+    /**
+     * this method uses the seed to call the current ship placement strat
+     */
+    
 	private void placeShips() {
     	
     	switch( this.seed ){
@@ -164,6 +175,9 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 
 	}
 
+	/**
+	 * This method places each ship at a random location.
+	 */
     private void randomPlace() {
 		while (!placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), PATROL_BOAT)) {
         }
@@ -178,6 +192,14 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 		
 	}
 
+    /**
+     * this method places a ship and keeps track of where it is put.
+     * @param x the x coordinate to place the left of the ship
+     * @param y the y coordinate to place the top of the ship
+     * @param direc the direction to place the ship, 0 = horizontal, 1 = verticle
+     * @param shipType the type of ship (to determine the length)
+     * @return a boolean, true if ship can be/has been placed
+     */
 	private boolean placeShip(int x, int y, int direc, int shipType){
     	
     	if( this.myFleet.placeShip(x, y, direc, shipType)){
@@ -202,6 +224,12 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     	
     }
 
+	/**
+	 * This method returns whether or not i can place a hip somewhere.
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @return true if i can place a ship here
+	 */
     private boolean isShip(int x, int y){
     	if( x < 10 && x>= 0 && y<10 && y >= 0){
     		return this.myShips[x][y];
@@ -983,6 +1011,21 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     //mskr this.hitShips an ArrayList<String>[]
     @Override
     public void resultOfAttack(int result) {
+    	if( this.turn_num>69){
+	    	for (int rep = 0; rep < 100; rep++){
+				if(rep%10==0){
+					System.out.println();
+				}
+				if( this.theirGrid[rep%10][rep/10] ){
+					System.out.print(" "+this.theirGrid[rep%10][rep/10]+" ");
+				}
+				else{
+					System.out.print(""+this.theirGrid[rep%10][rep/10]+" ");
+				}
+			}
+	    	System.out.println("Last Shot: "+this.lastShot);
+    	}
+		
         if( result != MISS ){
             this.hitsHeat[this.lastShot.getX()][this.lastShot.getY()][result % 10] += 2;
             if( this.lastShot.getX() > 0 ){
@@ -1355,6 +1398,7 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     public void resultOfGame(int result) {
     	if( result == WON ){
     		this.placementRate[this.seed][0]++;
+    		
     	}
     	else{
     		this.placementRate[this.seed][1]++;
@@ -1389,8 +1433,22 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 	            }
         	}
         }
+        if (this.turn_num < this.shortest_game){
+			this.shortest_game = this.turn_num;
+		}
+		else if(this.turn_num > this.longest_game){
+			this.longest_game = this.turn_num;
+		}
+		if (this.turn_num > 69 ){
+			this.games_over_69++;
+			
+			
+			
+			
+		}
+		this.total_turns = this.total_turns + this.turn_num;
         if( this.matchNumber == this.matchTotal - 1){
-	        //If match over print stats
+	        /*If match over print stats
 	        for ( int i = 0; i < this.placeMethods; i++ ){
 	        	double placeRate;
 	    		if ( this.placementRate[i][1] == 0 ){
@@ -1402,6 +1460,12 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 	    		 System.out.printf("Case %d rate: %f \n", i, placeRate );	
 	    	}
 	        System.out.println("ended on seed: " + this.seed );
+	        */
+        	
+        	System.out.println("Shortest Game: "+this.shortest_game);
+        	System.out.println("Longest Game: "+this.longest_game);
+        	System.out.println("Games over 65: "+this.games_over_69);
+        	System.out.println("Average Turns: "+((double)this.total_turns/(double)this.matchNumber));
         }
        
 

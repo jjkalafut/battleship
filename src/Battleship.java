@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.swing.*;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.event.*;
@@ -84,6 +83,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
      * these are samples used in the heatmap section.
      */
     private boolean hasRun = false;
+
     /**
      * The various 'states' of the GUI which provide different behavior.
      */
@@ -326,40 +326,34 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         attackHeatChart.setLowValueColour(blankColor);
 
         heatMapPanel = new JPanel(new GridBagLayout());
-        heatMapPanel.addMouseListener( new MouseListener(){
+        heatMapPanel.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent arg0) {
+                if (hasRun) {
+                    makeHeatGUI();
+                }
 
-			@Override
-			public void mouseClicked(MouseEvent arg0) {
-				if(hasRun){
-					makeHeatGUI();
-				}
-				
-			}
+            }
 
-			@Override
-			public void mouseEntered(MouseEvent arg0) {
-				//do nothing
-				
-			}
+            @Override
+            public void mouseEntered(MouseEvent arg0) {
+                //do nothing
+            }
 
-			@Override
-			public void mouseExited(MouseEvent arg0) {
-				//do nothing
-				
-			}
+            @Override
+            public void mouseExited(MouseEvent arg0) {
+                //do nothing
+            }
 
-			@Override
-			public void mousePressed(MouseEvent arg0) {
-				//do nothing
-				
-			}
+            @Override
+            public void mousePressed(MouseEvent arg0) {
+                //do nothing
+            }
 
-			@Override
-			public void mouseReleased(MouseEvent arg0) {
-				//do nothing
-				
-			}
-        	
+            @Override
+            public void mouseReleased(MouseEvent arg0) {
+                //do nothing
+            }
         });
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(5, 5, 5, 5);
@@ -393,15 +387,15 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         setSize(1000, 800);
         setVisible(true);
     }
-    
-    protected void makeHeatGUI(){
-    	if (table.getSelectedRow() >= 0) {
+
+    protected void makeHeatGUI() {
+        if (table.getSelectedRow() >= 0) {
             String captainName = (String) table.getValueAt(table.getSelectedRow(), BattleshipTableModel.NAME_COLUMN_INDEX);
-        	CaptainStatistics stats = detailedRecords.get(captainName);
-        	@SuppressWarnings("unused")
-        	HeatGUI hg = new HeatGUI( stats.getSamples(), stats.getSampleNames(), captainName );
+            CaptainStatistics stats = detailedRecords.get(captainName);
+            @SuppressWarnings("unused")
+            HeatGUI hg = new HeatGUI(stats.getSamples(), stats.getSampleNames(), captainName);
         }
-    	
+
     }
 
     /**
@@ -694,7 +688,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         iterations.setEnabled(true);
         stopButton.setEnabled(false);
         opponentCombo.setEnabled(true);
-        
+
         this.hasRun = true;
         // Reset progress back to 0
         totalProgressBar.setValue(0);
@@ -729,6 +723,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
                     "Not Enough Captains", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         // Compute the number of total rounds for keeping track of progress
         int numberofrounds = numCaptains * numCaptains - numCaptains;
 
@@ -738,29 +733,29 @@ public class Battleship extends JFrame implements Constants, ActionListener {
         // Have every captain play every other captain twice
         // Once as first player and once as second player
         int counter = 0;
-        for (Captain c : captainClasses) {
-            for (Captain d : captainClasses) {
-                if (!d.equals(c)) {
-                    // Do a battle and count all the successful ones
-                    if (battleCaptains(c, d)) {
-                        counter++;
-                    }
-
-                    // Stop if the user has requested it
-                    if (!keepGoing) {
-                        endCompetition();
-                        return;
-                    }
-
-                    
-                    totalProgressBar.setValue((100 * counter) / numberofrounds);
+        for (int i = 0; i < captainClasses.size(); i++) {
+            for (int j = i + 1; j < captainClasses.size(); j++) {
+                // Do a battle and count all the successful ones
+                if (battleCaptains(captainClasses.get(i), captainClasses.get(j))) {
+                    counter++;
                 }
+
+                // Stop if the user has requested it
+                if (!keepGoing) {
+                    endCompetition();
+                    return;
+                }
+
+                // Update the progress bar
+                totalProgressBar.setValue(2 * (100 * counter) / numberofrounds);
             }
         }
 
         // Print out all the detailed statistics to the console
-        for (String cs : detailedRecords.keySet()) {
-            detailedRecords.get(cs).outputStatistics();
+        for (Captain c : captainClasses) {
+            if (battleModel.isCaptainEnabled(c.getClass().getName())) {
+                detailedRecords.get(c.getClass().getName()).outputStatistics();
+            }
         }
 
         // Return to the NORMAL_MODE GUI state
@@ -806,14 +801,13 @@ public class Battleship extends JFrame implements Constants, ActionListener {
 
         int[][] startingOneAtk = detailedRecords.get(nameOne).getAttackPattern();
         int[][] startingOnePlc = detailedRecords.get(nameOne).getShipPlacement();
-        
+
         int[][] startingTwoAtk = detailedRecords.get(nameTwo).getAttackPattern();
         int[][] startingTwoPlc = detailedRecords.get(nameTwo).getShipPlacement();
-        
-        int times_sampeled = 0;
-        for (int i = 0; i < halfNumberOfMatches; i++) {
+
+        for (int i = 0; i < 2 * halfNumberOfMatches; i++) {
             // Initialize the first captain and his fleet
-            captainone.initialize(2*halfNumberOfMatches, numCaptains, nameTwo);
+            captainone.initialize(2 * halfNumberOfMatches, numCaptains, nameTwo);
 
             // Record his ship placement choices
             Fleet fleetone = captainone.getFleet();
@@ -830,7 +824,7 @@ public class Battleship extends JFrame implements Constants, ActionListener {
             detailedRecords.get(nameOne).addNewGame(shipLocs, nameTwo);
 
             // Initialize the second captain and her fleet
-            captaintwo.initialize(2*halfNumberOfMatches, numCaptains, nameOne);
+            captaintwo.initialize(2 * halfNumberOfMatches, numCaptains, nameOne);
 
             // Record her ship placement choices
             Fleet fleettwo = captaintwo.getFleet();
@@ -846,75 +840,149 @@ public class Battleship extends JFrame implements Constants, ActionListener {
             // Add these ship placement choices to the statistics against this particular opponent
             detailedRecords.get(nameTwo).addNewGame(shipLocs, nameOne);
 
-            // While the user has not requested that we stop ...
-            int rounds = 0;
-            while (keepGoing) {
-                // Run and keep track of rounds during this match
-                rounds++;
+            if (i % 2 == 0) {
+                // While the user has not requested that we stop ...
+                int rounds = 0;
+                while (keepGoing) {
+                    // Run and keep track of rounds during this match
+                    rounds++;
 
-                // Captain one goes first
-                Coordinate attackonecoord = captainone.makeAttack();	// Ask captain one for his move
-                int attackone = fleettwo.attacked(attackonecoord);		// Determine the result of that move
-                captainone.resultOfAttack(fleettwo.getLastAttackValue());					// Inform captain one of the result
-                captaintwo.opponentAttack(attackonecoord);				// Inform captain two of the result
+                    // Captain one goes first
+                    Coordinate attackonecoord = captainone.makeAttack();	// Ask captain one for his move
+                    int attackone = fleettwo.attacked(attackonecoord);		// Determine the result of that move
+                    captainone.resultOfAttack(fleettwo.getLastAttackValue());					// Inform captain one of the result
+                    captaintwo.opponentAttack(attackonecoord);				// Inform captain two of the result
 
-                // Did captain one win?
-                if (attackone == DEFEATED) {
+                    // Did captain one win?
+                    if (attackone == DEFEATED) {
 
-                    // Give captain one a point
-                    scoreOne++;
+                        // Give captain one a point
+                        scoreOne++;
 
-                    // Record the move
-                    detailedRecords.get(nameOne).addRound(nameTwo, true, attackonecoord);
+                        // Record the move
+                        detailedRecords.get(nameOne).addRound(nameTwo, true, attackonecoord);
 
-                    // Record the results of the match
-                    detailedRecords.get(nameOne).addFinishedGame(nameTwo, true, rounds);
-                    detailedRecords.get(nameTwo).addFinishedGame(nameOne, false, rounds);
+                        // Record the results of the match
+                        detailedRecords.get(nameOne).addFinishedGame(nameTwo, true, rounds);
+                        detailedRecords.get(nameTwo).addFinishedGame(nameOne, false, rounds);
 
-                    // Tell them the results of this match
-                    captainone.resultOfGame(WON);
-                    captaintwo.resultOfGame(LOST);
+                        // Tell them the results of this match
+                        captainone.resultOfGame(WON);
+                        captaintwo.resultOfGame(LOST);
 
-                    // Stop the match
-                    break;
+                        // Stop the match
+                        break;
+                    }
+
+                    // Captain two goes second
+                    Coordinate attacktwocoord = captaintwo.makeAttack();	// Ask captain two for her move
+                    int attacktwo = fleetone.attacked(attacktwocoord);		// Determine the result of that move
+                    captaintwo.resultOfAttack(fleetone.getLastAttackValue());					// Inform captain two of the result
+                    captainone.opponentAttack(attacktwocoord);				// Inform captain one of the result
+
+                    // Did captain two win?
+                    if (attacktwo == DEFEATED) {
+
+                        // Give captain two a point
+                        scoreTwo++;
+
+                        // Record the move
+                        detailedRecords.get(nameTwo).addRound(nameOne, true, attacktwocoord);
+
+                        // Record the results of the match
+                        detailedRecords.get(nameTwo).addFinishedGame(nameOne, true, rounds);
+                        detailedRecords.get(nameOne).addFinishedGame(nameTwo, false, rounds);
+
+
+                        // Tell them the results of this match
+                        captaintwo.resultOfGame(WON);
+                        captainone.resultOfGame(LOST);
+
+                        // Stop the match
+                        break;
+                    }
+
+
+                    // Was the result of either attack a hit?
+                    boolean oneHit = (attackone / HIT_MODIFIER == 1 || attackone / HIT_MODIFIER == 2);
+                    boolean twoHit = (attacktwo / HIT_MODIFIER == 1 || attacktwo / HIT_MODIFIER == 2);
+
+                    // Record these two moves in the statistics
+                    detailedRecords.get(nameOne).addRound(nameTwo, oneHit, attackonecoord);
+                    detailedRecords.get(nameTwo).addRound(nameOne, twoHit, attacktwocoord);
                 }
+            } else {
+                // While the user has not requested that we stop ...
+                int rounds = 0;
+                while (keepGoing) {
+                    // Run and keep track of rounds during this match
+                    rounds++;
 
-                // Captain two goes second
-                Coordinate attacktwocoord = captaintwo.makeAttack();	// Ask captain two for her move
-                int attacktwo = fleetone.attacked(attacktwocoord);		// Determine the result of that move
-                captaintwo.resultOfAttack(fleetone.getLastAttackValue());					// Inform captain two of the result
-                captainone.opponentAttack(attacktwocoord);				// Inform captain one of the result
+                    // Captain two goes first
+                    Coordinate attacktwocoord = captaintwo.makeAttack();	// Ask captain two for her move
+                    int attacktwo = fleetone.attacked(attacktwocoord);		// Determine the result of that move
+                    captaintwo.resultOfAttack(fleetone.getLastAttackValue());					// Inform captain two of the result
+                    captainone.opponentAttack(attacktwocoord);				// Inform captain one of the result
 
-                // Did captain two win?
-                if (attacktwo == DEFEATED) {
+                    // Did captain two win?
+                    if (attacktwo == DEFEATED) {
 
-                    // Give captain two a point
-                    scoreTwo++;
+                        // Give captain two a point
+                        scoreTwo++;
 
-                    // Record the move
-                    detailedRecords.get(nameTwo).addRound(nameOne, true, attacktwocoord);
+                        // Record the move
+                        detailedRecords.get(nameTwo).addRound(nameOne, true, attacktwocoord);
 
-                    // Record the results of the match
-                    detailedRecords.get(nameTwo).addFinishedGame(nameOne, true, rounds);
-                    detailedRecords.get(nameOne).addFinishedGame(nameTwo, false, rounds);
+                        // Record the results of the match
+                        detailedRecords.get(nameTwo).addFinishedGame(nameOne, true, rounds);
+                        detailedRecords.get(nameOne).addFinishedGame(nameTwo, false, rounds);
 
 
-                    // Tell them the results of this match
-                    captaintwo.resultOfGame(WON);
-                    captainone.resultOfGame(LOST);
+                        // Tell them the results of this match
+                        captaintwo.resultOfGame(WON);
+                        captainone.resultOfGame(LOST);
 
-                    // Stop the match
-                    break;
+                        // Stop the match
+                        break;
+                    }
+
+                    // Captain one goes second
+                    Coordinate attackonecoord = captainone.makeAttack();	// Ask captain one for his move
+                    int attackone = fleettwo.attacked(attackonecoord);		// Determine the result of that move
+                    captainone.resultOfAttack(fleettwo.getLastAttackValue());					// Inform captain one of the result
+                    captaintwo.opponentAttack(attackonecoord);				// Inform captain two of the result
+
+                    // Did captain one win?
+                    if (attackone == DEFEATED) {
+
+                        // Give captain one a point
+                        scoreOne++;
+
+                        // Record the move
+                        detailedRecords.get(nameOne).addRound(nameTwo, true, attackonecoord);
+
+                        // Record the results of the match
+                        detailedRecords.get(nameOne).addFinishedGame(nameTwo, true, rounds);
+                        detailedRecords.get(nameTwo).addFinishedGame(nameOne, false, rounds);
+
+                        // Tell them the results of this match
+                        captainone.resultOfGame(WON);
+                        captaintwo.resultOfGame(LOST);
+
+                        // Stop the match
+                        break;
+                    }
+
+                    // Was the result of either attack a hit?
+                    boolean oneHit = (attackone / HIT_MODIFIER == 1 || attackone / HIT_MODIFIER == 2);
+                    boolean twoHit = (attacktwo / HIT_MODIFIER == 1 || attacktwo / HIT_MODIFIER == 2);
+
+                    // Record these two moves in the statistics
+                    detailedRecords.get(nameOne).addRound(nameTwo, oneHit, attackonecoord);
+                    detailedRecords.get(nameTwo).addRound(nameOne, twoHit, attacktwocoord);
                 }
-
-                // Was the result of either attack a hit?
-                boolean oneHit = (attackone / HIT_MODIFIER == 1 || attackone / HIT_MODIFIER == 2);
-                boolean twoHit = (attacktwo / HIT_MODIFIER == 1 || attacktwo / HIT_MODIFIER == 2);
-
-                // Record these two moves in the statistics
-                detailedRecords.get(nameOne).addRound(nameTwo, oneHit, attackonecoord);
-                detailedRecords.get(nameTwo).addRound(nameOne, twoHit, attacktwocoord);
             }
+
 
             // Has the user requested that we stop?
             if (!keepGoing) {
@@ -922,17 +990,23 @@ public class Battleship extends JFrame implements Constants, ActionListener {
             }
 
             // update the progress bar
-            currentProgressBar.setValue((100 * (i + 1)) / halfNumberOfMatches);
-            
-         // Update the progress bar
-            if( (i + 1) % ( halfNumberOfMatches * .02) == 0){
-            	times_sampeled++;
-            	detailedRecords.get(nameOne).addSample(nameTwo, startingOneAtk, startingOnePlc );
-            	detailedRecords.get(nameTwo).addSample(nameOne, startingTwoAtk, startingTwoPlc );
+            currentProgressBar.setValue((100 * (i + 1)) / (2 * halfNumberOfMatches));
+
+            if (i % 500 == 0) {
+                battleModel.addCaptainScore(nameOne, scoreOne);
+                battleModel.addCaptainScore(nameTwo, scoreTwo);
+                table.repaint();
+                scoreOne = 0;
+                scoreTwo = 0;
             }
+
+            if ((i + 1) % (halfNumberOfMatches * .02) == 0) {
+                detailedRecords.get(nameOne).addSample(nameTwo, startingOneAtk, startingOnePlc);
+                detailedRecords.get(nameTwo).addSample(nameOne, startingTwoAtk, startingTwoPlc);
+            }
+
         }
 
-        //System.out.println("Sampeled: "+times_sampeled);
         // Update the score model and repaint the table
         battleModel.addCaptainScore(nameOne, scoreOne);
         battleModel.addCaptainScore(nameTwo, scoreTwo);
