@@ -64,10 +64,7 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     private int last_ship_losses;
     private int placeMethods = 4;
     private int[][] placementRate;
-    private int total_turns = 0;
-    private int longest_game = 0;
-    private int shortest_game = 100;
-    private int games_over_69 = 0;
+    private int hits_30 = 0;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -113,12 +110,13 @@ public class CaptainMurica_Improvement implements Captain, Constants {
             }
             
         }
-        //print out important stats at the end of each match
+        /*print out important stats at the end of each match
         if( this.matchNumber == this.matchTotal){
         	System.out.println("Average ships left for a loss: "+ ((double) this.ships_left / (double) (this.losses)));
         	System.out.println("% games lost on last ship: "+ ((double) this.last_ship_losses / (double) this.matchTotal));
         	System.out.println("Average hits left on last ship loss: "+ ((double) this.ship_hits_left / (double) (this.last_ship_losses)));
         }
+        */
         //reset a map of where my ships are
         for (boolean[] b : this.myShips) {
             Arrays.fill(b, false);
@@ -170,7 +168,7 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     	case 1: evenDistributePlace(); break;
     	case 2: learningPlace(); break;
     	case 3: randomPlace(); break;
-    	//default: evenDistributeTouchingPlace(); break;      	
+    	//case 4: zigzagoonPlace(); break;      	
     	}	
 
 	}
@@ -309,6 +307,172 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 			notTouchingPlace();
 		}
 		
+	}
+	private void zigzagoonPlace() {
+		
+		ArrayList<int[]> starts = new ArrayList<int[]>();
+		
+		for( int shipType = 4; shipType>=0; shipType--){
+			
+			int shipLen = this.shipLength[shipType];
+			int x = 0;
+        	int y = 0;
+        	int z = 0;
+	        
+	        
+	        //randomly place the large ship
+	        if( shipType == 4){
+	        	
+	        	x = this.rGen.nextInt(10);
+	        	y = this.rGen.nextInt(10);
+	        	z = this.rGen.nextInt(2);
+	        	
+	        	while(!placeShip(x,y,z,shipType)){
+	        		x = this.rGen.nextInt(10);
+		        	y = this.rGen.nextInt(10);
+		        	z = this.rGen.nextInt(2);
+	        	}
+	        	/*
+	        	 * 0 = right
+	        	 * 1 = up
+	        	 * 2 = left
+	        	 * 3 = down
+	        	 */
+	        	
+	        	
+	        }
+	     //not the 5-length ship
+	        else{
+	        	boolean placed = false;
+	        	
+	        	if(starts.isEmpty()){
+	        		x = this.rGen.nextInt(10);
+		        	y = this.rGen.nextInt(10);
+		        	z = this.rGen.nextInt(2);
+		        	
+		        	while(!placeShip(x,y,z,shipType)){
+		        		x = this.rGen.nextInt(10);
+			        	y = this.rGen.nextInt(10);
+			        	z = this.rGen.nextInt(2);
+		        	}
+	        	}
+	        	else{
+	        		for( int[] args : starts){
+	        			switch(args[2]){
+	        			
+		        			case 0:	x=args[0]; 			y=args[1]; 			z = 0; placed = placeShip(args[0],args[1],0,shipType); break;
+		        			
+		        			case 1: x=args[0]; 			y=args[1]-shipLen+1; 	z = 1; placed = placeShip(args[0],args[1]-shipLen+1,1,shipType); break;
+		        			
+		        			case 2: x=args[0]-shipLen+1; 	y=args[1]; 			z = 0; placed = placeShip(args[0]-shipLen+1,args[1],0,shipType); break;
+		        			
+		        			case 3: x=args[0]; 			y=args[1]; 			z = 1; placed = placeShip(args[0], args[1], 1, shipType); break;
+		        			
+	        			}
+	        			if(placed){
+	        				starts.remove(args);
+	        				break;
+	        			}
+	        		}
+	        		//no available placements
+	        		if(!placed){
+	        			x = this.rGen.nextInt(10);
+			        	y = this.rGen.nextInt(10);
+			        	z = this.rGen.nextInt(2);
+			        	
+			        	while(!placeShip(x,y,z,shipType)){
+			        		x = this.rGen.nextInt(10);
+				        	y = this.rGen.nextInt(10);
+				        	z = this.rGen.nextInt(2);
+			        	}
+	        		}
+	        	}	        	
+	        }
+	        
+	      //placed a ship, now add points to arraylist  
+	      //horizontal
+        	if( z==0 ){
+        		if( y > 0 ){
+        			if( (x+shipLen) < 8 ){
+        				starts.add(new int[]{x+shipLen,y-1,0});
+        			}
+        			if( x > 1 ){
+        				starts.add(new int[]{x-1,y-1,2});
+        			}
+	        		if( y > 1 ){
+	        			if( x > 0 ){
+	        				starts.add(new int[]{x-1,y-1,1});
+	        			}
+	        			if( (x+shipLen) < 9 ){
+	        				starts.add(new int[]{x+shipLen,y-1,1});
+	        			}
+	        		}
+	        		
+        		}
+	        	if( y < 9){
+	        		if( (x+shipLen) < 8 ){
+        				starts.add(new int[]{x+shipLen,y+1,0});
+        			}
+        			if( x > 1 ){
+        				starts.add(new int[]{x-1,y+1,2});
+        			}
+	        		if( y < 8 ){
+	        			if( x > 0 ){
+	        				starts.add(new int[]{x-1,y+1,3});
+	        			}
+	        			if( (x+shipLen) < 9 ){
+	        				starts.add(new int[]{x+shipLen,y+1,3});
+	        			}
+	        		}
+	        	}
+        	}
+        	//verticle
+        	else{
+        		if( x > 0 ){
+        			if( (y+shipLen) < 8 ){
+        				starts.add(new int[]{x-1,(y+shipLen),3});
+        			}
+        			if( y > 1 ){
+        				starts.add(new int[]{x-1,y-1,1});
+        			}
+	        		if( x > 1 ){
+	        			if( y > 0 ){
+	        				starts.add(new int[]{x-1,y-1,2});
+	        			}
+	        			if( (y+shipLen) < 9 ){
+	        				starts.add(new int[]{x-1,(y+shipLen),2});
+	        			}
+	        		}
+	        		
+        		}
+	        	if( x < 9){
+	        		if( (y+shipLen) < 8 ){
+        				starts.add(new int[]{x+1,y+shipLen,3});
+        			}
+        			if( y > 1 ){
+        				starts.add(new int[]{x+1,y+1,1});
+        			}
+	        		if( x > 1 ){
+	        			if( y > 0 ){
+	        				starts.add(new int[]{x+1,y+1,0});
+	        			}
+	        			if( (y+shipLen) < 9 ){
+	        				starts.add(new int[]{x+1,(y+shipLen),0});
+	        			}
+	        		}
+	        	}
+        	}
+        	//mix up the array to avoid horizontal tendency
+        	starts = shuffle(starts);
+		}	
+	}
+	
+	private ArrayList<int[]> shuffle(ArrayList<int[]> list){
+		int shuf_seed = this.rGen.nextInt(list.size());
+		for (int i = 0; i < (list.size()/2); i++){
+			list.add(list.remove(shuf_seed));
+		}
+		return list;
 	}
 	private void evenDistributeTouchingPlace() {
 		
@@ -720,9 +884,11 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 			for (int i = 0; i < 10; i++){				
 				if( this.theirGrid[x][i] ){
 					rerun = true;
+					break;
 				}
 				if( this.theirGrid[i][y] ){
 					rerun = true;
+					break;
 				}			
 			}
 
@@ -928,6 +1094,18 @@ public class CaptainMurica_Improvement implements Captain, Constants {
        
         
     	double[][] heat = new double[10][10];
+    	double[][] random_dis = {
+    			{ 1.08, 1.1, 1.12, 1.14, 1.15, 1.15, 1.14, 1.12, 1.1, 1.08},
+    			{ 1.1, 1.12, 1.14, 1.15, 1.17, 1.17, 1.15, 1.14, 1.12, 1.1},
+    			{ 1.12, 1.14, 1.15, 1.17, 1.18, 1.18, 1.17, 1.15, 1.14, 1.12},
+    			{ 1.14, 1.15, 1.17, 1.18, 1.2, 1.2, 1.18, 1.17, 1.15, 1.14},
+    			{ 1.15, 1.17, 1.18, 1.2, 1.21, 1.21, 1.2, 1.18, 1.17, 1.15},
+    			{ 1.15, 1.17, 1.18, 1.2, 1.21, 1.21, 1.2, 1.18, 1.17, 1.15},
+    			{ 1.14, 1.15, 1.17, 1.18, 1.2, 1.2, 1.18, 1.17, 1.15, 1.14},
+    			{ 1.12, 1.14, 1.15, 1.17, 1.18, 1.18, 1.17, 1.15, 1.14, 1.12},
+    			{ 1.1, 1.12, 1.14, 1.15, 1.17, 1.17, 1.15, 1.14, 1.12, 1.1},
+    			{ 1.08, 1.1, 1.12, 1.14, 1.15, 1.15, 1.14, 1.12, 1.1, 1.08}
+    	};
 
         for (int s = 0; s < 5; s++) {
             if (this.enemyShips[s]) {
@@ -985,7 +1163,7 @@ public class CaptainMurica_Improvement implements Captain, Constants {
         		} 
         		total += this.avgHeat[q % 10][q / 10][s];
         	}
-        	appHeat[q % 10][q / 10] = heat[q % 10][q / 10] * total; 
+        	appHeat[q % 10][q / 10] = heat[q % 10][q / 10] * total; // * random_dis[q % 10][q / 10]; 
         	if (appHeat[q % 10][q / 10] > best) {
                 best = appHeat[q % 10][q / 10];
                 bestX = q % 10;
@@ -1011,22 +1189,10 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     //mskr this.hitShips an ArrayList<String>[]
     @Override
     public void resultOfAttack(int result) {
-    	if( this.turn_num>69){
-	    	for (int rep = 0; rep < 100; rep++){
-				if(rep%10==0){
-					System.out.println();
-				}
-				if( this.theirGrid[rep%10][rep/10] ){
-					System.out.print(" "+this.theirGrid[rep%10][rep/10]+" ");
-				}
-				else{
-					System.out.print(""+this.theirGrid[rep%10][rep/10]+" ");
-				}
-			}
-	    	System.out.println("Last Shot: "+this.lastShot);
-    	}
-		
         if( result != MISS ){
+        	if(this.turn_num<30){
+        		hits_30++;
+        	}
             this.hitsHeat[this.lastShot.getX()][this.lastShot.getY()][result % 10] += 2;
             if( this.lastShot.getX() > 0 ){
             	this.hitsHeat[this.lastShot.getX() -1 ][this.lastShot.getY()][result % 10]++;
@@ -1398,6 +1564,11 @@ public class CaptainMurica_Improvement implements Captain, Constants {
     public void resultOfGame(int result) {
     	if( result == WON ){
     		this.placementRate[this.seed][0]++;
+    		for( int i = 0; i < 100; i++){
+    			if(!this.theirGrid[i%10][i/10]){
+    				this.shotsHeat[i%10][i/10]++;
+    			}
+    		}
     		
     	}
     	else{
@@ -1433,42 +1604,6 @@ public class CaptainMurica_Improvement implements Captain, Constants {
 	            }
         	}
         }
-        if (this.turn_num < this.shortest_game){
-			this.shortest_game = this.turn_num;
-		}
-		else if(this.turn_num > this.longest_game){
-			this.longest_game = this.turn_num;
-		}
-		if (this.turn_num > 69 ){
-			this.games_over_69++;
-			
-			
-			
-			
-		}
-		this.total_turns = this.total_turns + this.turn_num;
-        if( this.matchNumber == this.matchTotal - 1){
-	        /*If match over print stats
-	        for ( int i = 0; i < this.placeMethods; i++ ){
-	        	double placeRate;
-	    		if ( this.placementRate[i][1] == 0 ){
-	    			placeRate = this.placementRate[i][0];
-	    		}
-	    		else{
-	    			placeRate = (double) this.placementRate[i][0] / (double) this.placementRate[i][1];
-	    		}
-	    		 System.out.printf("Case %d rate: %f \n", i, placeRate );	
-	    	}
-	        System.out.println("ended on seed: " + this.seed );
-	        */
-        	
-        	System.out.println("Shortest Game: "+this.shortest_game);
-        	System.out.println("Longest Game: "+this.longest_game);
-        	System.out.println("Games over 65: "+this.games_over_69);
-        	System.out.println("Average Turns: "+((double)this.total_turns/(double)this.matchNumber));
-        }
-       
-
     }
 
 	private void figureShips() {

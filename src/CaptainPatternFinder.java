@@ -12,9 +12,10 @@ public class CaptainPatternFinder implements Captain {
    
     protected Fleet myFleet;
     
-    private boolean[][][] shotPattern = new boolean[10][10][50000];
+    private boolean[][][] shotPattern = new boolean[10][10][1000000];
     private int index;
     private int matchnum = 0; 
+    private float avg_hits = 0;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -35,40 +36,217 @@ public class CaptainPatternFinder implements Captain {
         }
         while (!myFleet.placeShip(generator.nextInt(10), generator.nextInt(10), generator.nextInt(2), AIRCRAFT_CARRIER)) {
         }
-        index = 0;
-        int ships_hit = 0;
-        boolean all_hit = false;
-        boolean[][] shots = new boolean[10][10];
-        
-        while(!all_hit){
-        	for (int i = 0; i<30; i++){
-        		int x = generator.nextInt(10);
-        		int y = generator.nextInt(10);
-        		if(!shots[x][y]){
-        			shots[x][y] = true;
-        		}
-        		else{
-        			i--;
-        			continue;
-        		}
-        		if(myFleet.isShipAt(new Coordinate(x,y))){
-        			ships_hit++;
-        		}
-        	}
-        	if(ships_hit>=8){
-        		for( int j = 0; j<10; j++){
-        			for( int k = 0; k<10; k++ ){
-        				shotPattern[k][j][index]=shots[k][j];
-        			}
-        		}
-        		all_hit = true;
-        	}
-        }
-        if(matchnum == numMatches){
-        	compileBest();
-        }
-    }
 
+        
+	        float ships_hit = 0;
+	        boolean all_hit = false;
+	        float[] hit_rates = {(float) 0.1852,(float) 0.1830,(float) 0.1738,(float) 0.1834,(float) 0.1859,(float) .1866, (float) .1819,(float) .1935,(float) .1898,(float) .1896}; 
+	        //18.51-18.52% accurate
+	        boolean[][] map1={
+	        		{false,false,false,false,false,true,false,false,false,false},
+	        		{false,false,true,false,true,false,true,true,false,false},
+	        		{false,false,false,false,false,true,false,false,true,false},
+	        		{false,true,true,true,true,false,true,true,false,false},
+	        		{false,false,true,false,false,false,true,true,true,false},
+	        		{false,true,false,false,true,false,false,false,false,true},
+	        		{false,true,false,false,false,true,true,true,false,false},
+	        		{false,true,false,false,false,false,false,false,false,true},
+	        		{false,false,false,false,true,false,false,true,false,false},
+	        		{false,false,true,false,false,false,true,false,false,false}
+	        };
+	        //18.30% accurate
+	        boolean[][] map2={
+	        		{false,true,true,false,false,true,false,false,false,false},
+	        		{false,false,true,false,true,false,false,false,true,false},
+	        		{true,false,true,true,false,false,true,false,false,false},
+	        		{true,false,false,true,true,false,false,false,true,false},
+	        		{true,false,false,true,false,true,false,true,true,false},
+	        		{true,false,false,true,false,true,false,false,true,false},
+	        		{false,false,false,true,false,false,true,true,false,false},
+	        		{false,true,false,true,false,false,true,false,false,false},
+	        		{false,false,false,false,false,false,false,true,false,false},
+	        		{false,false,false,false,false,false,false,false,false,false}
+	        		
+	        };
+	        //17.38%
+	        boolean[][] map3={
+	        		{false,false,true,true,false,true,true,false,false,false},
+	        		{false,false,false,false,true,false,false,false,false,false},
+	        		{false,true,false,false,false,true,true,true,false,true},
+	        		{true,false,false,false,true,false,false,false,false,false},
+	        		{true,true,false,false,false,true,false,false,false,false},
+	        		{false,false,false,false,true,true,true,false,true,false},
+	        		{false,false,false,true,false,true,false,false,true,true},
+	        		{false,false,false,false,true,false,false,false,false,false},
+	        		{false,false,true,false,false,true,false,false,false,true},
+	        		{false,false,true,false,false,false,false,false,true,true}
+	        };
+	        //18.34-18.35%
+	        boolean[][] map4={
+	        		{false,false,false,true,false,false,false,false,false,false},
+	        		{false,false,true,true,false,false,false,false,false,false},
+	        		{false,false,false,false,false,false,false,false,true,false},
+	        		{true,true,true,true,false,false,true,true,false,false},
+	        		{false,false,true,false,true,true,true,false,true,false},
+	        		{false,false,false,false,false,false,false,false,true,true},
+	        		{false,false,false,false,true,false,false,false,false,true},
+	        		{false,false,true,false,true,true,false,true,true,false},
+	        		{false,false,false,true,true,false,false,false,true,false},
+	        		{false,false,false,true,true,true,false,false,false,false}
+	        };
+	        //18.59%
+	        boolean[][] map5={
+	        		{false,true,true,false,false,false,false,false,false,false},
+	        		{false,true,false,true,true,false,false,true,false,false},
+	        		{false,false,false,false,false,true,false,false,true,false},
+	        		{false,false,true,false,true,true,false,true,true,false},
+	        		{false,false,true,false,true,false,false,true,false,false},
+	        		{false,false,true,true,true,false,false,false,false,true},
+	        		{false,false,false,true,false,true,false,false,true,false},
+	        		{false,false,true,true,true,false,false,false,false,true},
+	        		{false,false,true,false,false,true,true,false,false,false},
+	        		{false,false,false,false,false,false,false,false,false,false}
+	        };
+	        //18.66%
+	        boolean[][] map6={
+	        		{false,false,false,false,false,false,false,false,false,false},
+	        		{false,false,true,true,false,true,false,false,true,false},
+	        		{false,false,true,false,true,false,false,false,true,false},
+	        		{false,false,true,true,true,true,false,false,true,true},
+	        		{false,false,false,true,false,false,true,false,false,false},
+	        		{true,false,true,false,false,true,true,false,false,false},
+	        		{false,false,true,true,true,false,false,false,false,false},
+	        		{false,true,false,false,true,true,false,false,false,true},
+	        		{false,false,false,false,false,false,true,false,false,false},
+	        		{false,false,true,false,false,true,true,false,false,false}
+	        };
+	        //18.19%
+	        boolean[][] map7={
+	        		{false,false,false,true,false,true,false,true,false,false},
+	        		{false,false,true,false,false,false,false,false,false,false},
+	        		{false,false,true,false,false,false,false,true,false,false},
+	        		{false,false,false,true,true,true,false,false,false,true},
+	        		{false,true,false,true,false,false,false,false,false,true},
+	        		{true,false,true,false,true,true,true,true,false,false},
+	        		{false,false,false,false,false,true,false,false,true,true},
+	        		{false,false,false,true,false,true,false,false,true,false},
+	        		{true,false,true,true,false,false,false,false,false,false},
+	        		{false,false,false,true,false,false,true,false,false,false}
+	        };
+	        //19.35%
+	        boolean[][] map8={
+	        		{false,true,true,false,false,false,false,false,false,false},
+	        		{false,false,false,false,false,false,true,false,false,false},
+	        		{false,false,false,false,true,true,true,false,true,false},
+	        		{true,false,false,true,true,true,true,true,false,false},
+	        		{false,false,false,true,false,true,true,true,false,false},
+	        		{false,false,true,true,false,true,true,false,true,false},
+	        		{true,false,false,false,false,true,true,false,false,false},
+	        		{false,false,true,true,false,false,true,false,true,false},
+	        		{false,false,false,false,false,false,true,false,false,false},
+	        		{false,false,false,false,false,false,false,false,false,false}
+	        };
+	        //18.98%
+	        boolean[][] map9={
+	        		{false,false,false,true,false,false,false,false,false,false},
+	        		{false,false,false,true,true,false,false,true,false,false},
+	        		{false,false,true,false,true,false,false,false,false,false},
+	        		{false,true,false,true,true,false,false,true,true,true},
+	        		{false,false,false,true,false,true,true,false,false,false},
+	        		{false,true,false,false,true,true,false,false,true,false},
+	        		{false,false,false,true,false,false,true,true,false,true},
+	        		{false,false,true,true,false,true,false,true,false,false},
+	        		{false,false,false,false,false,true,true,false,false,false},
+	        		{false,false,false,false,false,false,false,false,true,false}	
+	        };
+	        //18.96%
+	        boolean[][] map10={
+	        		{false,false,false,false,false,false,false,false,false,false},
+	        		{false,true,true,false,false,false,true,false,false,false},
+	        		{false,false,false,false,true,false,false,true,false,false},
+	        		{false,false,false,true,false,true,false,false,false,false},
+	        		{true,true,false,true,true,true,false,false,true,true},
+	        		{false,false,false,false,true,true,false,false,true,false},
+	        		{true,false,false,true,true,true,true,false,true,false},
+	        		{false,true,true,false,false,true,false,true,false,false},
+	        		{false,false,false,false,true,false,false,false,false,false},
+	        		{false,false,true,true,false,false,false,false,false,false}
+	        };
+	        //
+	        boolean[][] mapfinal={
+	        		{false,false,false,false,false,false,false,false,false,false},
+	        		{false,false,false,false,false,false,false,true,false,false},
+	        		{false,true,true,true,false,true,false,true,false,false},
+	        		{false,true,false,true,true,false,true,true,false,false},
+	        		{false,true,true,true,false,true,false,false,false,false},
+	        		{false,false,true,true,true,true,true,true,false,false},
+	        		{false,false,false,false,true,false,true,false,true,false},
+	        		{false,false,false,true,true,false,false,false,false,false},
+	        		{false,false,true,true,true,true,false,false,false,false},
+	        		{false,false,false,false,false,false,false,false,false,false}
+	        };
+	        boolean[][][] maps = { map1, map2, map3, map4, map5, map6, map7, map8, map9, map10};
+	        /*
+	        float[][] final_map = new float[10][10];
+	        for(int i = 0; i<100; i++){
+	        	for( int j = 0; j <10; j++){
+		        	if( maps[j][i%10][i/10] ){
+		        		final_map[i%10][i/10] += hit_rates[j]/30;
+		        	}
+		        	else
+		        	{
+		        		final_map[i%10][i/10] += ( ( ( (float) 1 )-hit_rates[j] ) / (float) 70 )*((float)9/(float)70);
+		        	}
+	        	}
+	        }
+	        
+	        
+	        */
+	        for(int i = 0; i<100; i++){
+		        	if( mapfinal[i%10][i/10] && this.myFleet.isShipAt(new Coordinate(i%10,i/10))){
+		        		ships_hit++;
+		        	}
+	        }
+	        avg_hits += ships_hit/(float)(numMatches);
+	        if(matchnum == numMatches){
+	        	System.out.println("Average Hits for map 1: "+avg_hits);
+	        	System.out.println(100*avg_hits/30+"% accuracy");
+	        }
+	        /*
+	        boolean[][] shots = new boolean[10][10];
+	        
+	        while(!all_hit){
+	        	for (int i = 0; i<30; i++){
+	        		int x = generator.nextInt(10);
+	        		int y = generator.nextInt(10);
+	        		if(!shots[x][y]){
+	        			shots[x][y] = true;
+	        			if(myFleet.isShipAt(new Coordinate(x,y))){
+	            			ships_hit++;
+	            		}
+	        		}
+	        		else{
+	        			i--;
+	        			continue;
+	        		}
+	        		
+	        	}
+	        	if(ships_hit>=8){
+	        		for( int j = 0; j<10; j++){
+	        			for( int k = 0; k<10; k++ ){
+	        				shotPattern[k][j][matchnum-1]=shots[k][j];
+	        			}
+	        		}
+	        		all_hit = true;
+	        	}
+	        }
+	        if(matchnum == numMatches){
+	        	compileBest();
+	        }
+	        */
+    }
+    
+	
 
     private void compileBest() {
 		int[][] bestOpts = new int[10][10];
@@ -82,7 +260,7 @@ public class CaptainPatternFinder implements Captain {
 			}
 		}
 		boolean[][] shots = new boolean[10][10];
-		for( int l = 0; l < 40; l++){
+		for( int l = 0; l < 30; l++){
 			int biggest = 0;
 			int x = 0;
 			int y = 0;
