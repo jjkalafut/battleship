@@ -3,7 +3,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
-public class CaptainLana implements Captain, Constants {
+public class CaptainKrieger implements Captain, Constants {
 
     //splash pattern
 	//figureships()
