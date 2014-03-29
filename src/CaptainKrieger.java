@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+
 public class CaptainKrieger implements Captain, Constants {
 
     //splash pattern
@@ -20,7 +21,7 @@ public class CaptainKrieger implements Captain, Constants {
     private int[][]	 myShots;
     private int[][] theirHits;
     private int[][] theirShots;
-    private int[][]  myShipPlaces;
+    private int[][][]  myShipPlaces;
     private Coordinate lastShot;
     private ArrayList<ArrayList<Coordinate>> hitShips;
     private ArrayList<ArrayList<Placement>> theirPlacements;
@@ -66,6 +67,7 @@ public class CaptainKrieger implements Captain, Constants {
         	this.moving = new int[]{0,0,0,1,1};
     		this.lastDirecs= new int[]{ 1, 1, 1, 0, 0};
     		this.lastFleet= new Coordinate[]{ new Coordinate(9,8), new Coordinate(4,7), new Coordinate(0,7), new Coordinate(5,2), new Coordinate(0,4)};
+    		this.myShipPlaces = new int[10][10][5];
         }
         for( int s = 0; s < 5; s++){
 	        for( int i = 0; i < 100; i++){
@@ -74,7 +76,8 @@ public class CaptainKrieger implements Captain, Constants {
         }
         
         createPlacements( this.hitsHeat, this.theirPlacements);
-        interPlace(myFleet);       
+        createPlacements( this.myShipPlaces, this.myPlacements);
+        disPlace(myFleet);       
     }
 
     private void interPlace(Fleet flt) {
@@ -127,6 +130,47 @@ public class CaptainKrieger implements Captain, Constants {
 		}		
 	}
 
+    private void disPlace(Fleet flt){
+    	if( !this.wasWin){
+			for(int i = 0; i < 5; i++){
+				int direc = this.myPlacements.get(i).get(0).direc;
+				Coordinate pos = this.myPlacements.get(i).get(0).coords[0];
+				double best = this.myPlacements.get(i).get(0).score;
+				Coordinate[] coords = this.myPlacements.get(i).get(0).coords;
+				for( Placement p : this.myPlacements.get(i)){
+					if( p.score < best ){
+						best = p.score;
+						pos = p.coords[0];
+						direc = p.direc;
+						coords = p.coords;
+					}
+				}
+				this.lastDirecs[i] = direc;
+				this.lastFleet[i] = pos;
+				flt.placeShip(pos, direc, i);
+				for( Coordinate mark : coords){
+					this.myShipPlaces[mark.getX()][mark.getY()][i]++;
+				}
+				for( int j = i; j < 5; j++){
+					ArrayList<Placement> bad = new ArrayList<Placement>();
+					for(Placement other : this.myPlacements.get(j)){
+						for(Coordinate no_good : coords){
+							if( other.contains(no_good)){
+								bad.add(other);
+							}
+						}
+					}
+					this.myPlacements.get(j).removeAll(bad);
+				}
+			}
+		}
+		else{
+			for( int i = 0; i < 5; i++){
+				flt.placeShip(this.lastFleet[i], this.lastDirecs[i], i);
+			}
+		}
+    }
+    
 	private void createPlacements(double[][] scorer, ArrayList<ArrayList<Placement>> list) {
 		for( int s = 0; s < 5; s++){
 			int shipLen = this.shipLength[s];
@@ -187,7 +231,37 @@ public class CaptainKrieger implements Captain, Constants {
 			list.add(places);
 		}		
 	}
-
+    private void createPlacements(int[][][] scorer, ArrayList<ArrayList<Placement>> list) {
+		for( int s = 0; s < 5; s++){
+			int shipLen = this.shipLength[s];
+			ArrayList<Placement> places = new ArrayList<Placement>();
+			for(int i = 0; i < 11-shipLen; i++){
+				for( int j = 0; j < 10; j++){
+					Placement p = new Placement(0, s, new Coordinate(i,j));					
+					double score = 0;
+					
+					for( int k = 0; k < shipLen; k++){
+						score += scorer[i + k][j][s];
+					}
+					p.score = score;					 
+					places.add(p);
+				}
+			}
+			for( int j = 0; j < 11 - shipLen; j++){
+				for( int i = 0; i < 10; i++){
+					Placement p = new Placement(1, s, new Coordinate(i,j));					
+					double score = 0;
+					
+					for( int k = 0; k < shipLen; k++){
+						score += scorer[i][j + k][s];
+					}
+					p.score = score;					 
+					places.add(p);
+				}
+			}
+			list.add(places);
+		}		
+	}
     @Override
     public Fleet getFleet() {
         return myFleet;

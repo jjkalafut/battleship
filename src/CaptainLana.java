@@ -18,9 +18,7 @@ public class CaptainLana implements Captain, Constants {
     private double[][][] hitsHeat;
     private int[][][] myHits;
     private int[][]	 myShots;
-    private int[][] theirHits;
-    private int[][] theirShots;
-    private int[][]  myShipPlaces;
+    private int[][][]  myShipPlaces;
     private Coordinate lastShot;
     private ArrayList<ArrayList<Coordinate>> hitShips;
     private ArrayList<ArrayList<Placement>> theirPlacements;
@@ -28,7 +26,7 @@ public class CaptainLana implements Captain, Constants {
     private Coordinate[] lastFleet;
     private int[] lastDirecs;
     private boolean wasWin;
-
+    private int turnNumber;
     private int[] moving;
 
     @Override
@@ -36,6 +34,7 @@ public class CaptainLana implements Captain, Constants {
     	
     	this.theirPlacements = new ArrayList<ArrayList<Placement>>();
     	this.myPlacements = new ArrayList<ArrayList<Placement>>();
+    	this.turnNumber = 0;
     	//new random
         this.generator = new Random();
         //new fleet
@@ -56,11 +55,12 @@ public class CaptainLana implements Captain, Constants {
         	this.myHits = new int[10][10][5];
             this.myShots = new int[10][10];
         	this.lastOpponent = opponent;
-        	this.hitsHeat = new double[10][10][5];     
+        	this.hitsHeat = new double[10][10][5]; 
+        	this.myShipPlaces = new int[10][10][5];
         	for( int j = 0; j < 100; j++){
         		this.myShots[j%10][j/10] = 2;
         		for( int k = 0; k < 5; k++){
-        			this.myHits[j%10][j/10][k] = 1;        			
+        			this.myHits[j%10][j/10][k] = 1;            			
         		}
         	}
         	this.moving = new int[]{0,0,0,1,1};
@@ -74,7 +74,9 @@ public class CaptainLana implements Captain, Constants {
         }
         
         createPlacements( this.hitsHeat, this.theirPlacements);
-        interPlace(myFleet);       
+        createPlacements( this.myShipPlaces, this.myPlacements);
+        disPlace(myFleet);
+        //interPlace(myFleet);       
     }
 
     private void interPlace(Fleet flt) {
@@ -127,6 +129,46 @@ public class CaptainLana implements Captain, Constants {
 		}		
 	}
 
+    private void disPlace(Fleet flt){
+    	if( !this.wasWin){
+			for(int i = 0; i < 5; i++){
+				int direc = this.myPlacements.get(i).get(0).direc;
+				Coordinate pos = this.myPlacements.get(i).get(0).coords[0];
+				double best = this.myPlacements.get(i).get(0).score;
+				Coordinate[] coords = this.myPlacements.get(i).get(0).coords;
+				for( Placement p : this.myPlacements.get(i)){
+					if( p.score < best ){
+						best = p.score;
+						pos = p.coords[0];
+						direc = p.direc;
+						coords = p.coords;
+					}
+				}
+				this.lastDirecs[i] = direc;
+				this.lastFleet[i] = pos;
+				flt.placeShip(pos, direc, i);
+				for( Coordinate mark : coords){
+					this.myShipPlaces[mark.getX()][mark.getY()][i]++;
+				}
+				for( int j = i; j < 5; j++){
+					ArrayList<Placement> bad = new ArrayList<Placement>();
+					for(Placement other : this.myPlacements.get(j)){
+						for(Coordinate no_good : coords){
+							if( other.contains(no_good)){
+								bad.add(other);
+							}
+						}
+					}
+					this.myPlacements.get(j).removeAll(bad);
+				}
+			}
+		}
+		else{
+			for( int i = 0; i < 5; i++){
+				flt.placeShip(this.lastFleet[i], this.lastDirecs[i], i);
+			}
+		}
+    }
 	private void createPlacements(double[][] scorer, ArrayList<ArrayList<Placement>> list) {
 		for( int s = 0; s < 5; s++){
 			int shipLen = this.shipLength[s];
@@ -156,7 +198,7 @@ public class CaptainLana implements Captain, Constants {
 			list.add(places);
 		}		
 	}
-    private void createPlacements(double[][][] scorer, ArrayList<ArrayList<Placement>> list) {
+    private void createPlacements(int[][][] scorer, ArrayList<ArrayList<Placement>> list) {
 		for( int s = 0; s < 5; s++){
 			int shipLen = this.shipLength[s];
 			ArrayList<Placement> places = new ArrayList<Placement>();
@@ -188,32 +230,49 @@ public class CaptainLana implements Captain, Constants {
 		}		
 	}
 
+    private void createPlacements(double[][][] scorer, ArrayList<ArrayList<Placement>> list) {
+		for( int s = 0; s < 5; s++){
+			int shipLen = this.shipLength[s];
+			ArrayList<Placement> places = new ArrayList<Placement>();
+			for(int i = 0; i < 11-shipLen; i++){
+				for( int j = 0; j < 10; j++){
+					Placement p = new Placement(0, s, new Coordinate(i,j));					
+					double score = 0;
+					
+					for( int k = 0; k < shipLen; k++){
+						score += scorer[i + k][j][s];
+					}
+					p.score = score;					 
+					places.add(p);
+				}
+			}
+			for( int j = 0; j < 11 - shipLen; j++){
+				for( int i = 0; i < 10; i++){
+					Placement p = new Placement(1, s, new Coordinate(i,j));					
+					double score = 0;
+					
+					for( int k = 0; k < shipLen; k++){
+						score += scorer[i][j + k][s];
+					}
+					p.score = score;					 
+					places.add(p);
+				}
+			}
+			list.add(places);
+		}		
+	}
     @Override
     public Fleet getFleet() {
         return myFleet;
     }
-    private boolean isAdjacent(Coordinate c1, Coordinate c2){
-    	if(c1.getX()==c2.getX()){
-    		if(c1.getY() == 1+c2.getY()){
-    			return true;
-    		}
-    		if(c1.getY()+1 == c2.getY()){
-    			return true;
-    		}
-    	}
-    	if(c1.getY()==c2.getY()){
-    		if(c1.getX() == 1+c2.getX()){
-    			return true;
-    		}
-    		if(c1.getX()+1 == c2.getX()){
-    			return true;
-    		}
-    	}
-    	return false;
-    }
     @Override
     public Coordinate makeAttack() {
-    	
+    	this.turnNumber++;
+    	if( this.turnNumber < 0){
+    		this.lastShot = makeMinimizerShot();
+    		mark(this.myMatchShots, this.lastShot);
+    	    return this.lastShot;
+    	}    	
     	Coordinate shot = new Coordinate(0,0); 
     	ArrayList<Coordinate> possibles = new ArrayList<Coordinate>();
     	if( !this.hitShips.isEmpty() ){
@@ -275,6 +334,65 @@ public class CaptainLana implements Captain, Constants {
     
 	}
 
+	private Coordinate makeMinimizerShot() {
+		switch(this.turnNumber){
+			case 1:  
+				int least = this.myHits[0][0][0];
+				Coordinate c = new Coordinate(0,0);
+				for( int i = 0; i < 100; i++){
+					if( !this.myMatchShots[i%10][i/10] ){
+						for( int j = 0; j < 5; j++){
+							if( this.myHits[i%10][i/10][j] < least){
+								c = new Coordinate( i%10, i/10);
+								least = this.myHits[i%10][i/10][j];
+							}
+						}
+					}
+				}
+				return c;
+			
+			case 2:
+				int best = this.myHits[0][0][0];
+				Coordinate g = new Coordinate(0,0);
+				for( int i = 0; i < 100; i++){
+					if( !this.myMatchShots[i%10][i/10] ){
+						for( int j = 0; j < 5; j++){
+							if( this.myHits[i%10][i/10][j] > best){
+								g = new Coordinate( i%10, i/10);
+								best = this.myHits[i%10][i/10][j];
+							}
+						}
+					}
+				}
+				return g;
+			
+			case 3:
+				ArrayList<Placement> places = this.theirPlacements.get(0);
+				double score = places.get(0).score;
+				Coordinate b = places.get(0).coords[0];
+				for( Placement p : places){
+					if( p.score > score){
+						score = p.score;
+						b = p.coords[0];
+					}
+				}
+				return b;
+			
+			case 4:
+				int least_shot = this.myShots[0][0];
+				Coordinate s = new Coordinate(0,0);
+				for( int i = 0; i < 100; i++){
+					if( !this.myMatchShots[i%10][i/10] && this.myShots[i%10][i/10] < least_shot){
+						s = new Coordinate( i%10, i/10);
+						least_shot = this.myShots[i%10][i/10];
+					}				
+				}
+				return s;
+		}
+		System.out.println("badness occured");
+		return null;
+	}
+
 	private void mark(boolean[][] array, Coordinate shot) {
 		if( array[shot.getX()][shot.getY()] ){
 			array[shot.getX()][shot.getY()] = false;
@@ -322,38 +440,37 @@ public class CaptainLana implements Captain, Constants {
         	if( result >= 20){
 	     
 	        	this.shipsAlive[shipMod] = false;
-	        	ArrayList<Coordinate> bad_ship = new ArrayList<Coordinate>();
-	        	for( ArrayList<Coordinate> ship : this.hitShips ){
-	        		if(ship.get(0).getX() == shipMod ){
-	        			bad_ship = ship;
-	        			break;
-	        		}
-	        	}
-	        	this.hitShips.remove(bad_ship);	        	
+	        		        	
         	}
         	else{
-        		boolean hitBefore = false;
-        		for( ArrayList<Coordinate> ship : this.hitShips ){
-	        		if( ship.get(0).getX() == shipMod ){
-	        			hitBefore = true;
-	        			ship.add(this.lastShot);
-	        			break;
-	        		}
-	        	}
-        		if( !hitBefore ){
-        			ArrayList<Coordinate> newShip = new ArrayList<Coordinate>();
-        			newShip.add( new Coordinate( shipMod, 0 ) );
-        			newShip.add( this.lastShot );
-        			this.hitShips.add(newShip);
+        		boolean hit = false;
+        		for( ArrayList<Coordinate> c : this.hitShips){
+        			if( c.get(0).getX() == shipMod ){
+        				hit = true;
+        			}
+        			if(!hit){
+        				ArrayList<Coordinate> temp = new ArrayList<Coordinate>();
+        				temp.add(new Coordinate(shipMod,0));
+        				this.hitShips.add(temp);
+        			}
         		}
         	}
-        	getPossibles();
         	for( int s = 0; s < 5; s++){
         		if( this.shipsAlive[s] && s != shipMod){
         			ArrayList<Placement> places = this.theirPlacements.get(s);
         			ArrayList<Placement> bads = new ArrayList<Placement>();
         			for(Placement p : places ){
         				if( p.contains(this.lastShot) ){
+        					bads.add(p);
+        				}
+        			}
+        			places.removeAll(bads);
+        		}
+        		else if( this.shipsAlive[s] && s == shipMod ){
+        			ArrayList<Placement> places = this.theirPlacements.get(s);
+        			ArrayList<Placement> bads = new ArrayList<Placement>();
+        			for(Placement p : places ){
+        				if( !p.contains(this.lastShot) ){
         					bads.add(p);
         				}
         			}
