@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import CaptainLana.Placement;
+
 
 public class CaptainHolder {
 
@@ -260,4 +262,195 @@ public class CaptainHolder {
 		}
 		
 	}
+}
+
+private void interPlace(Fleet flt) {
+	if( !this.wasWin){
+		for(int i = 0; i < 5; i++){
+			int shipLen = this.shipLength[i];
+			if(this.moving[i] == 1){
+				if(this.lastFleet[i].getY() == 9){
+					if( this.lastFleet[i].getX() == 10-shipLen ){
+						this.lastDirecs[i] = 1;
+						this.moving[i] = 0; 
+						this.lastFleet[i] = new Coordinate(0,0);
+						i--;
+						continue;
+					}
+					else{
+						this.lastFleet[i] = new Coordinate(this.lastFleet[i].getX() + 1,0);
+					}						
+				}
+				else{
+					this.lastFleet[i] = new Coordinate(this.lastFleet[i].getX(),this.lastFleet[i].getY()+1);
+				}
+			}
+			else{
+				if(this.lastFleet[i].getX() == 9){
+					if( this.lastFleet[i].getY() == 10-shipLen ){
+						this.lastDirecs[i] = 0;
+						this.moving[i] = 1; 
+						this.lastFleet[i] = new Coordinate(0,0);
+						i--;
+						continue;
+					}
+					else{
+						this.lastFleet[i] = new Coordinate(0,this.lastFleet[i].getY() + 1);
+					}
+				}
+				else{
+					this.lastFleet[i] = new Coordinate(this.lastFleet[i].getX()+1,this.lastFleet[i].getY());
+				}
+			}
+			if(!flt.placeShip(this.lastFleet[i], this.lastDirecs[i], i)){
+				i--;
+			}
+		}
+	}
+	else{
+		for( int i = 0; i < 5; i++){
+			flt.placeShip(this.lastFleet[i], this.lastDirecs[i], i);
+		}
+	}		
+}
+private void createPlacements(double[][] scorer, ArrayList<ArrayList<Placement>> list) {
+	for( int s = 0; s < 5; s++){
+		int shipLen = this.shipLength[s];
+		ArrayList<Placement> places = new ArrayList<Placement>();
+		for(int i = 0; i < 11-shipLen; i++){
+			for( int j = 0; j < 10; j++){
+				Placement p = new Placement(0, s, new Coordinate(i,j));
+				double score = 0;
+				for( int k = 0; k < shipLen; k++){
+					score += scorer[i + k][j];
+				}
+				p.score = score;
+				places.add(p);
+			}
+		}
+		for( int j = 0; j < 11 - shipLen; j++){
+			for( int i = 0; i < 10; i++){
+				Placement p = new Placement(1, s, new Coordinate(i,j));
+				double score = 0;
+				for( int k = 0; k < shipLen; k++){
+					score += scorer[i][j + k];
+				}
+				p.score = score;
+				places.add(p);
+			}
+		}
+		list.add(places);
+	}		
+}
+private void disPlace(Fleet flt){
+	if( !this.wasWin){
+		for(int i = 0; i < 5; i++){
+			int direc = this.myPlacements.get(i).get(0).direc;
+			Coordinate pos = this.myPlacements.get(i).get(0).coords[0];
+			double best = this.myPlacements.get(i).get(0).score;
+			Coordinate[] coords = this.myPlacements.get(i).get(0).coords;
+			for( Placement p : this.myPlacements.get(i)){
+				if( p.score < best ){
+					best = p.score;
+					pos = p.coords[0];
+					direc = p.direc;
+					coords = p.coords;
+				}
+			}
+			this.lastDirecs[i] = direc;
+			this.lastFleet[i] = pos;
+			flt.placeShip(pos, direc, i);
+			for( Coordinate mark : coords){
+				this.myShipPlaces[mark.getX()][mark.getY()][i]++;
+			}
+			for( int j = i; j < 5; j++){
+				ArrayList<Placement> bad = new ArrayList<Placement>();
+				for(Placement other : this.myPlacements.get(j)){
+					for(Coordinate no_good : coords){
+						if( other.contains(no_good)){
+							bad.add(other);
+						}
+					}
+				}
+				this.myPlacements.get(j).removeAll(bad);
+			}
+		}
+	}
+	else{
+		for( int i = 0; i < 5; i++){
+			flt.placeShip(this.lastFleet[i], this.lastDirecs[i], i);
+		}
+	}
+}
+private class Placement{
+	
+	public Coordinate[] coords;
+	public double score = 0;
+    public int[] shipLength = {2,3,3,4,5};
+    public int direc;
+    public int type;
+	
+	Placement(int direc, int type, Coordinate loc){
+		this.direc = direc;
+		this.type = type;
+		coords = new Coordinate[shipLength[type]];
+		coords[0] = loc;
+		if( direc == 0 ){
+			for( int i = 1; i < this.shipLength[type]; i++){
+				coords[i] = new Coordinate(i+loc.getX(),loc.getY());
+			}
+		}
+		else{
+			for( int i = 1; i < this.shipLength[type]; i++){
+				coords[i] = new Coordinate(loc.getX(), i+loc.getY());
+			}
+		}
+	}
+	
+	public boolean contains(int x, int y){
+		if(direc == 0){
+			if( y != coords[0].getY()){
+				return false;
+			}
+			if( x >= coords[0].getX() && x <= coords[coords.length-1].getX()){
+				return true;
+			}
+			return false;
+		}
+		else{
+			if( x != coords[0].getX()){
+				return false;
+			}
+			if( y >= coords[0].getY() && y <= coords[coords.length-1].getY()){
+				return true;
+			}
+			return false;
+		}
+	}
+	public boolean contains(Coordinate c){
+		int x= c.getX();
+		int y= c.getY();
+		if(direc == 0){
+			if( y != coords[0].getY()){
+				return false;
+			}
+			if( x >= coords[0].getX() && x <= coords[coords.length-1].getX()){
+				return true;
+			}
+			return false;
+		}
+		else{
+			if( x != coords[0].getX()){
+				return false;
+			}
+			if( y >= coords[0].getY() && y <= coords[coords.length-1].getY()){
+				return true;
+			}
+			return false;
+		}
+	}
+	public String toString(){
+		return ""+coords[0]+", "+coords[1];
+	}	
+	
 }

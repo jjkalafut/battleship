@@ -1,3 +1,4 @@
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
@@ -27,20 +28,16 @@ import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-
 public class HeatGUI extends JFrame {
 
-	private ArrayList<ArrayList<int[][]>> heatSample;
-	private ArrayList<String> names;
-	private JLabel title, placementHeatMapLabel, attackHeatMapLabel;
-	private JComboBox<String> versus;
-	private JSlider atk, def;
-
+    private ArrayList<ArrayList<int[][]>> heatSample;
+    private ArrayList<String> names;
+    private JLabel title, placementHeatMapLabel, attackHeatMapLabel;
+    private JComboBox<String> versus;
+    private JSlider atk, def;
     private HeatChart placementHeatChart;
     private HeatChart attackHeatChart;
-    
     private JPanel heatMapPanel;
-    
     /**
      * The labels for the heat-map X-axis
      */
@@ -61,56 +58,54 @@ public class HeatGUI extends JFrame {
      * The color used for maximum values in the heat map
      */
     protected static final Color highColor = Color.RED;
-	
-	public HeatGUI( ArrayList<ArrayList<int[][]>> heatSample, ArrayList<String> names, String captainName){
-		super("Extended Heatmap for "+captainName);
-		
-		this.heatSample = heatSample;
-		this.names = names;
-		
-		Container container = getContentPane();
-		GridBagLayout layout = new GridBagLayout();
-		int[] widths = {450,450};
-		int[] heights = {40,30,430,50};
-		layout.columnWidths = widths;
-		layout.rowHeights = heights;
-		container.setLayout(layout);
-				
-		//title
-		this.title = new JLabel("Extended Heatmap for "+captainName);
-		this.title.setFont(this.title.getFont().deriveFont((float) 25));
-		
-		GridBagConstraints tgb = new GridBagConstraints();
-		tgb.gridwidth = 2;
-		tgb.gridx = 0;
-		tgb.gridy = 0;
-		tgb.anchor = GridBagConstraints.CENTER;
-				
-		container.add(title, tgb);
-		
-		//Opponent Spinbox
-		this.versus = new JComboBox<String>();
-		for( String str : this.names ){
-			this.versus.addItem(str);
-		}
-		this.versus.setSize(100, 30);
-		this.versus.addItemListener(new ItemListener(){
 
-			@Override
-			public void itemStateChanged(ItemEvent arg0) {
-				opponentChanged();
-				
-			}
-			
-		});
-		GridBagConstraints cbc = new GridBagConstraints();
-		cbc.gridwidth = 2;
-		cbc.gridx = 0;
-		cbc.gridy = 1;
-		cbc.anchor = GridBagConstraints.CENTER;
-		
-		container.add( this.versus, cbc);
-		
+    public HeatGUI(ArrayList<ArrayList<int[][]>> heatSample, ArrayList<String> names, String captainName) {
+        super("Extended Heatmap for " + captainName);
+
+        this.heatSample = heatSample;
+        this.names = names;
+
+        Container container = getContentPane();
+        GridBagLayout layout = new GridBagLayout();
+        int[] widths = {450, 450};
+        int[] heights = {40, 30, 430, 50};
+        layout.columnWidths = widths;
+        layout.rowHeights = heights;
+        container.setLayout(layout);
+
+        //title
+        this.title = new JLabel("Extended Heatmap for " + captainName);
+        this.title.setFont(this.title.getFont().deriveFont((float) 25));
+
+        GridBagConstraints tgb = new GridBagConstraints();
+        tgb.gridwidth = 2;
+        tgb.gridx = 0;
+        tgb.gridy = 0;
+        tgb.anchor = GridBagConstraints.CENTER;
+
+        container.add(title, tgb);
+
+        //Opponent Spinbox
+        this.versus = new JComboBox<String>();
+        for (String str : this.names) {
+            this.versus.addItem(str);
+        }
+        this.versus.setSize(100, 30);
+        this.versus.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent arg0) {
+                opponentChanged();
+
+            }
+        });
+        GridBagConstraints cbc = new GridBagConstraints();
+        cbc.gridwidth = 2;
+        cbc.gridx = 0;
+        cbc.gridy = 1;
+        cbc.anchor = GridBagConstraints.CENTER;
+
+        container.add(this.versus, cbc);
+
         // Setup the heatmap panel
         placementHeatChart = new HeatChart(new double[10][10], 0.0, 0.0);
         placementHeatChart.setCellSize(new Dimension(40, 40));
@@ -149,77 +144,75 @@ public class HeatGUI extends JFrame {
         c.gridx = 2;
         c.gridy = 1;
         heatMapPanel.add(new JLabel("Attack Pattern"), c);
-        
+
         //panel constraints
-       GridBagConstraints panc = new GridBagConstraints();
-       panc.gridwidth = 2;
-       panc.gridx = 0;
-       panc.gridy = 2;
+        GridBagConstraints panc = new GridBagConstraints();
+        panc.gridwidth = 2;
+        panc.gridx = 0;
+        panc.gridy = 2;
 
         container.add(heatMapPanel, panc);
-		
-		//Sliders for selection
-		this.atk = new JSlider(SwingConstants.HORIZONTAL);
-		this.atk.setMaximum(99);
-		this.def = new JSlider(SwingConstants.HORIZONTAL);
-		this.def.setMaximum(99);
-		
-		ChangeListener cl = new ChangeListener(){
 
-			@Override
-			public void stateChanged(ChangeEvent arg0) {
-				opponentChanged();
-				
-			}
-			
-		};
-		
-		this.atk.addChangeListener(cl);
-		this.atk.setSize(200, 50);
-		this.def.addChangeListener(cl);
-		this.def.setSize(200, 50);
-		
-		GridBagConstraints slider = new GridBagConstraints();
-		slider.gridy = 3;
-		slider.gridx = 1;
-		slider.anchor = GridBagConstraints.CENTER;
-		
-		container.add(this.atk, slider);
-		
-		slider.gridx = 0;
-		
-		container.add(this.def, slider);
-		
-		
-		pack();
-		setSize(1000,650);
-		setVisible(true);
-		setLocationRelativeTo(null);
-		opponentChanged();
-		
-	}
+        //Sliders for selection
+        this.atk = new JSlider(SwingConstants.HORIZONTAL);
+        this.atk.setMaximum(99);
+        this.def = new JSlider(SwingConstants.HORIZONTAL);
+        this.def.setMaximum(99);
 
-	protected void opponentChanged() {
-		
-		int[][] placement = new int[10][10];
-		int[][] attack = new int[10][10];
-		
-		placement = this.heatSample.get(this.versus.getSelectedIndex()).get(this.def.getValue() + 100);
-		attack = this.heatSample.get(this.versus.getSelectedIndex()).get(this.atk.getValue());
-		
-		// Make real heat maps from the statistics data
-	    placementHeatChart.setZValues(placement);
-	    placementHeatChart.setLowValueColour(lowColor);
-	    placementHeatChart.setHighValueColour(highColor);
-	
-	    attackHeatChart.setZValues(attack);
-	    attackHeatChart.setLowValueColour(lowColor);
-	    attackHeatChart.setHighValueColour(highColor);
-	    
-	
-	    // Update the heat map labels with the images we just generated
-	    placementHeatMapLabel.setIcon(new ImageIcon(placementHeatChart.getChartImage()));
-	    attackHeatMapLabel.setIcon(new ImageIcon(attackHeatChart.getChartImage()));
-		
-	}
+        ChangeListener cl = new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent arg0) {
+                opponentChanged();
+
+            }
+        };
+
+        this.atk.addChangeListener(cl);
+        this.atk.setSize(200, 50);
+        this.def.addChangeListener(cl);
+        this.def.setSize(200, 50);
+
+        GridBagConstraints slider = new GridBagConstraints();
+        slider.gridy = 3;
+        slider.gridx = 1;
+        slider.anchor = GridBagConstraints.CENTER;
+
+        container.add(this.atk, slider);
+
+        slider.gridx = 0;
+
+        container.add(this.def, slider);
+
+
+        pack();
+        setSize(1000, 650);
+        setVisible(true);
+        setLocationRelativeTo(null);
+        opponentChanged();
+
+    }
+
+    protected void opponentChanged() {
+
+        int[][] placement = new int[10][10];
+        int[][] attack = new int[10][10];
+
+        placement = this.heatSample.get(this.versus.getSelectedIndex()).get(this.def.getValue() + 100);
+        attack = this.heatSample.get(this.versus.getSelectedIndex()).get(this.atk.getValue());
+
+        // Make real heat maps from the statistics data
+        placementHeatChart.setZValues(placement);
+        placementHeatChart.setLowValueColour(lowColor);
+        placementHeatChart.setHighValueColour(highColor);
+
+        attackHeatChart.setZValues(attack);
+        attackHeatChart.setLowValueColour(lowColor);
+        attackHeatChart.setHighValueColour(highColor);
+
+
+        // Update the heat map labels with the images we just generated
+        placementHeatMapLabel.setIcon(new ImageIcon(placementHeatChart.getChartImage()));
+        attackHeatMapLabel.setIcon(new ImageIcon(attackHeatChart.getChartImage()));
+
+    }
 }

@@ -41,7 +41,7 @@ public class CaptainStatistics {
         int[][] rotatedShipPlacement = new int[10][10];
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
-                rotatedShipPlacement[i][j] = shipPlacement[j][9-i];
+                rotatedShipPlacement[i][j] = shipPlacement[j][9 - i];
             }
         }
         return rotatedShipPlacement;
@@ -51,7 +51,7 @@ public class CaptainStatistics {
         int[][] rotatedAttackPattern = new int[10][10];
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
-                rotatedAttackPattern[i][j] = attackPattern[j][9-i];
+                rotatedAttackPattern[i][j] = attackPattern[j][9 - i];
             }
         }
         return rotatedAttackPattern;
@@ -96,41 +96,41 @@ public class CaptainStatistics {
             System.err.printf("'%s' attacked '%s' out of bounds at the coordinate %s\n", name, opponent, attack.toString());
         }
     }
-    
+
     public ArrayList<ArrayList<int[][]>> getSamples() {
-    	return this.heatSamples;
-    }
-    public ArrayList<String> getSampleNames(){
-    	return this.oppNames;
+        return this.heatSamples;
     }
 
-    public void addSample( String oppName, int[][] oldAtk , int[][] oldPlace ){
-    	
-    	int[][] atkHeat = new int[10][10];
-    	int[][] curHeat = getAttackPattern();
-    	int[][] placeHeat = new int[10][10];
-    	int[][] curPlace = getShipPlacement();
-    	
-    	for( int i = 0; i< 100; i++){
-    		int x = i/10;
-    		int y = i%10;
-    		atkHeat[x][y] = curHeat[x][y] - oldAtk[x][y];
-    		placeHeat[x][y] = curPlace[x][y] - oldPlace[x][y];
-    	}
-    	//System.out.println("Old atk "+ oldAtk[4][5]);
-    	if( this.oppNames.contains(oppName)){
-    		this.heatSamples.get(this.oppNames.indexOf(oppName)).add(this.heatSamples.get(this.oppNames.indexOf(oppName)).size() / 2, atkHeat);
-    		this.heatSamples.get(this.oppNames.indexOf(oppName)).add( placeHeat);
-    	}else{
-    		this.oppNames.add(oppName);
-    		ArrayList<int[][]> temp = new ArrayList<int[][]>();
-    		temp.add(atkHeat);
-    		temp.add(placeHeat);
-    		this.heatSamples.add(temp);
-    	}
+    public ArrayList<String> getSampleNames() {
+        return this.oppNames;
     }
-    
-    
+
+    public void addSample(String oppName, int[][] oldAtk, int[][] oldPlace) {
+
+        int[][] atkHeat = new int[10][10];
+        int[][] curHeat = getAttackPattern();
+        int[][] placeHeat = new int[10][10];
+        int[][] curPlace = getShipPlacement();
+
+        for (int i = 0; i < 100; i++) {
+            int x = i / 10;
+            int y = i % 10;
+            atkHeat[x][y] = curHeat[x][y] - oldAtk[x][y];
+            placeHeat[x][y] = curPlace[x][y] - oldPlace[x][y];
+        }
+        //System.out.println("Old atk "+ oldAtk[4][5]);
+        if (this.oppNames.contains(oppName)) {
+            this.heatSamples.get(this.oppNames.indexOf(oppName)).add(this.heatSamples.get(this.oppNames.indexOf(oppName)).size() / 2, atkHeat);
+            this.heatSamples.get(this.oppNames.indexOf(oppName)).add(placeHeat);
+        } else {
+            this.oppNames.add(oppName);
+            ArrayList<int[][]> temp = new ArrayList<int[][]>();
+            temp.add(atkHeat);
+            temp.add(placeHeat);
+            this.heatSamples.add(temp);
+        }
+    }
+
     public String getResultsAgainst(String opponent) {
         if (!opponents.containsKey(opponent)) {
             return null;

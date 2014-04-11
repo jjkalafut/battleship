@@ -74,7 +74,7 @@ import javax.imageio.stream.FileImageOutputStream;
  * offset parameters indicate what the first value will be, with the intervals
  * providing the increment from one column or row to the next.
  *
- * <p> <strong>Consider an example:</strong>  <blockquote><pre>
+ * <p> <strong>Consider an example:</strong> null <blockquote><pre>
  * double[][] zValues = new double[][]{
  * 		{1.2, 1.3, 1.5},
  * 		{1.0, 1.1, 1.6},

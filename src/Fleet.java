@@ -28,7 +28,6 @@ public class Fleet implements Constants {
      * The five standard ships of a single Battleship game
      */
     protected Ship[] fleet;
-    
     protected int attackValue;
 
     /**
@@ -132,7 +131,7 @@ public class Fleet implements Constants {
         }
         return MISS;
     }
-    
+
     public int getLastAttackValue() {
         return attackValue;
     }
