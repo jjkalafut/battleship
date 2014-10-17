@@ -24,11 +24,9 @@ public class CaptainDo_Urden implements Captain {
     private int									lastTenIdx;
     private boolean 							wasWin;
     private int 								turnNum;
-    private boolean[]							myShipWasHit;
-    private ArrayList<ArrayList<TinyScoreShip>> myPlaceShips;
     private double[][][]						currentHeat;
     private ArrayList<AttackType>				attackMethods;
-    //private SuperMegaShipPlacer_3000 			sp;
+    private SuperMegaShipPlacer_3000 			sp;
     private Random								rGen;
     private int									match_num;
 
@@ -48,65 +46,7 @@ public class CaptainDo_Urden implements Captain {
         }
 
         if (!opponent.equals(this.lastOpponent)) {
-        	this.myShipWasHit = new boolean[]{false, false,false,false,false};
-        	this.myPlaceShips = new ArrayList<ArrayList<TinyScoreShip>>();
-        	ArrayList<TinyScoreShip> ship1 = new ArrayList<TinyScoreShip>();
-        	for( int ii = 9; ii >= 0; ii--){
-        		for( int jj = 0; jj < 10; jj += 2){
-        			ship1.add(new TinyScoreShip(new Coordinate(ii,jj),1));
-        		}
-        	}
-        	ArrayList<TinyScoreShip> ship2 = new ArrayList<TinyScoreShip>();
-        	for( int ii = 0; ii < 10; ii++){
-        		for( int jj = 0; (jj+2) < 10; jj += 3){
-        			ship2.add(new TinyScoreShip(new Coordinate(ii,jj),1));
-        		}
-        	}
-        	ship2.add(new TinyScoreShip(new Coordinate(0,9),0));
-        	ship2.add(new TinyScoreShip(new Coordinate(3,9),0));
-        	ship2.add(new TinyScoreShip(new Coordinate(6,9),0));
-        	ship2.add(new TinyScoreShip(new Coordinate(7,9),0));
-        	ArrayList<TinyScoreShip> ship3 = new ArrayList<TinyScoreShip>();
-        	for( int ii = 0; ii < 10; ii++){
-        		for( int jj = 7; jj >=0 ; jj -= 3){
-        			ship3.add(new TinyScoreShip(new Coordinate(ii,jj),1));
-        		}
-        	}
-        	ship3.add(new TinyScoreShip(new Coordinate(0,0),0));
-        	ship3.add(new TinyScoreShip(new Coordinate(3,0),0));
-        	ship3.add(new TinyScoreShip(new Coordinate(6,0),0));
-        	ship3.add(new TinyScoreShip(new Coordinate(7,0),0));
-        	
-        	ArrayList<TinyScoreShip> ship4 = new ArrayList<TinyScoreShip>();
-        	for( int ii = 0; ii < 10; ii++){
-        		for( int jj = 0; (jj+3) < 10; jj += 4){
-        			ship4.add(new TinyScoreShip(new Coordinate(ii,jj),1));
-        		}
-        	}
-        	for( int kk = 0; (kk+3) < 10; kk += 4){
-        		ship4.add(new TinyScoreShip(new Coordinate(kk,8),0));
-        		ship4.add(new TinyScoreShip(new Coordinate(kk,9),0));
-        	}
-        	ship4.add(new TinyScoreShip(new Coordinate(6,9),0));
-        	
-        	ArrayList<TinyScoreShip> ship5 = new ArrayList<TinyScoreShip>();
-        	for( int ii = 9; ii >= 0; ii--){
-        		for( int jj = 0; (jj+4) < 10; jj += 5){
-        			ship5.add(new TinyScoreShip(new Coordinate(jj,ii),0));
-        		}
-        	}
-        	
-        	System.out.println(ship1.size());
-        	System.out.println(ship2.size());
-        	System.out.println(ship3.size());
-        	System.out.println(ship4.size());
-        	System.out.println(ship5.size());
-        	this.myPlaceShips.add(ship1);
-        	this.myPlaceShips.add(ship2);
-        	this.myPlaceShips.add(ship3);
-        	this.myPlaceShips.add(ship4);
-        	this.myPlaceShips.add(ship5);
-        	
+        	       	
             this.lastTen = new double[10][3];
             this.lastTenVal = new double[3];
             this.lastTenIdx = 0;
@@ -331,7 +271,7 @@ public class CaptainDo_Urden implements Captain {
             this.attackMethods.get(1).init(1, 2);
             this.attackMethods.get(2).init(1, 2);
             this.match_num = 0;
-            //sp = new SuperMegaShipPlacer_3000();
+            sp = new SuperMegaShipPlacer_3000();
         }
         else{
         	this.match_num++;
@@ -355,51 +295,10 @@ public class CaptainDo_Urden implements Captain {
         createPlacements(this.currentHeat, this.theirPlacements);
 
         rGen = new Random();
-        //this.myFleet = sp.getNextPlacement(this.wasWin, this.turnNum);
-        this.myFleet = getDistShipPlace();
+        this.myFleet = sp.getNextPlacement(this.wasWin, this.turnNum);
+        //this.myFleet = getDistShipPlace();
         this.turnNum = 0;
     }
-
-    private Fleet getDistShipPlace() {
-		Fleet fl = new Fleet();
-		if( this.match_num != 0){
-			for( int i = 0; i < 5; i++){
-				if( !this.myShipWasHit[i]){
-					fl.placeShip(this.myPlaceShips.get(i).get(0).c, this.myPlaceShips.get(i).get(0).direction, i);
-				}
-			}
-    	}
-		else{
-			for( int l = 0; l < 5 ; l++){
-				int i = 0;
-				while(!fl.placeShip(this.myPlaceShips.get(l).get(i).c, this.myPlaceShips.get(l).get(i).direction, l)){
-					i++;
-				}
-			}
-		}
-		for( int i = 4; i >= 0; i--){
-			if( this.myShipWasHit[i]){
-				this.myPlaceShips.get(i).get(0).score++;
-				ArrayList< TinyScoreShip> bads = new ArrayList<TinyScoreShip>();
-				do{
-					bads.add(this.myPlaceShips.get(i).get(0));
-					int best = Integer.MAX_VALUE;
-					for( int k = 0; k < this.myPlaceShips.get(i).size(); k++){
-						if( !bads.contains(this.myPlaceShips.get(i).get(k)) && this.myPlaceShips.get(i).get(k).score < best ){
-							best = this.myPlaceShips.get(i).get(k).score;
-							this.myPlaceShips.get(i).add(0,this.myPlaceShips.get(i).remove(k));
-						}
-					}
-					if( bads.size() == this.myPlaceShips.get(i).size()){
-						System.out.println("No places to place ship?");
-					}
-				}while(!fl.placeShip(this.myPlaceShips.get(i).get(0).c, this.myPlaceShips.get(i).get(0).direction, i));
-			}
-		}
-		
-		Arrays.fill(this.myShipWasHit, false);
-		return fl;
-	}
 
 	private Fleet randomPlace(){
     	Fleet fl = new Fleet();
@@ -640,9 +539,6 @@ public class CaptainDo_Urden implements Captain {
     	if( this.myFleet.isShipAt(coord)){
     		this.their_hits[coord.getX()][coord.getY()]++;
     		this.their_hit_shots++;
-    		if(this.myFleet.attacked(coord)% 10 < 5 ){
-    			this.myShipWasHit[this.myFleet.attacked(coord)% 10] = true;
-    		}
     	}
     	else{
     		this.their_misses[coord.getX()][coord.getY()]++;
@@ -1161,16 +1057,6 @@ public class CaptainDo_Urden implements Captain {
 		public TinyShip(Coordinate cord, int d){
 			c = cord;
 			direction = d;
-		}
-	}
-	private class TinyScoreShip{
-		public Coordinate c;
-		public int direction;
-		public int score;
-		public TinyScoreShip(Coordinate cord, int d){
-			c = cord;
-			direction = d;
-			score = 0;
 		}
 	}
 	
