@@ -63,7 +63,9 @@ public class CaptainLana implements Captain, Constants {
             }
         }
         createPlacements(this.hitsHeat, this.theirPlacements);
-        createPlacements(this.myShipPlaces, this.myPlacements);
+        if(!this.wasWin){
+        	createPlacements(this.myShipPlaces, this.myPlacements);
+        }
         disPlace(myFleet);
     }
 

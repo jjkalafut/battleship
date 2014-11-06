@@ -29,6 +29,7 @@ public class CaptainDo_Urden implements Captain {
     private SuperMegaShipPlacer_3000 			sp;
     private Random								rGen;
     private int									match_num;
+    private int[]								atk_used;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -47,10 +48,11 @@ public class CaptainDo_Urden implements Captain {
 
         if (!opponent.equals(this.lastOpponent)) {
         	       	
-            this.lastTen = new double[10][3];
-            this.lastTenVal = new double[3];
+            this.lastTen = new double[10][4];
+            this.lastTenVal = new double[4];
+            this.atk_used = new int[4];
             this.lastTenIdx = 0;
-        	this.accuracy = new int[3];
+        	this.accuracy = new int[4];
             this.wasWin = false;
             this.their_hits = new int[10][10];
             this.their_misses = new int [10][10];
@@ -264,25 +266,79 @@ public class CaptainDo_Urden implements Captain {
 				
             	
             });
+            this.attackMethods.add(new AttackType(){
+
+            	/* int 0 hits, int 1 shots, double 1 heat */
+				@Override
+				public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
+					
+					if( !started ){
+						 for (int j = 0; j < 100; j++) {						 
+				                shipIntArrays[j % 10][j / 10][0][0] = 2;				                
+				          }
+						 started = true;
+					}
+					
+					shipIntArrays[c.getX()][c.getY()][0][0]++;
+					
+					for( int m = 0; m < 5; m++){
+						shipDoubleArrays[c.getX()][c.getY()][m][0] = 800000.0 / (double) shipIntArrays[c.getX()][c.getY()][0][0];
+					}
+				}
+
+				@Override
+				public double[][][] getHeat() {
+					double [][][] ret = new double[10][10][5];
+					double biggest = 0;
+					double smallest = Double.MAX_VALUE;
+					for (int i = 0; i < 100; i++) {
+						for (int j = 0; j < 5; j++){
+							ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
+							if( shipDoubleArrays[i % 10][i / 10][j][0] > biggest ){
+								biggest = shipDoubleArrays[i % 10][i / 10][j][0];
+							}
+							if( shipDoubleArrays[i % 10][i / 10][j][0] < smallest ){
+								smallest = shipDoubleArrays[i % 10][i / 10][j][0];
+							}
+						}						
+					}
+					if( biggest == 0 ){
+						biggest = 1;
+					}
+					if(smallest == biggest){
+						smallest = .5*biggest;
+					}
+					biggest -= smallest;
+					for (int i = 0; i < 100; i++) {
+						for (int j = 0; j < 5; j++){
+							ret[i % 10][i / 10][j] -= smallest;
+							ret[i % 10][i / 10][j] /= biggest;
+						}
+					}
+					return ret;
+				}
+				
+            });
 	        /*
 	         *Init attack patterns 
 	         */            
             this.attackMethods.get(0).init(1, 2);
             this.attackMethods.get(1).init(1, 2);
             this.attackMethods.get(2).init(1, 2);
+            this.attackMethods.get(3).init(1, 1);
             this.match_num = 0;
             sp = new SuperMegaShipPlacer_3000();
         }
         else{
         	this.match_num++;
         }
-
+        /*
         if( (this.match_num % 1000) == 0){
         	for( int i = 0; i < this.attackMethods.size(); i++){
         		System.out.println("Accuracy "+i+" = " + this.lastTenVal[i]);
         	}
         }
-
+		*/
         double best_val = 0;
         int idx = 0;
         for( int j = 0; j < this.lastTenVal.length; j++){
@@ -291,6 +347,7 @@ public class CaptainDo_Urden implements Captain {
         		idx = j;
         	}
         }
+        this.atk_used[idx]++;
         this.currentHeat = this.attackMethods.get(idx).getHeat();
         createPlacements(this.currentHeat, this.theirPlacements);
 
@@ -298,6 +355,12 @@ public class CaptainDo_Urden implements Captain {
         this.myFleet = sp.getNextPlacement(this.wasWin, this.turnNum);
         //this.myFleet = getDistShipPlace();
         this.turnNum = 0;
+        
+        if( this.match_num == numMatches -1){
+        	for( int i = 0; i < this.atk_used.length; i++){
+        		System.out.println("Used Attack "+ i +" "+(float) this.atk_used[i]/(float)this.match_num+"% of the time.");
+        	}
+        }
     }
 
 	private Fleet randomPlace(){

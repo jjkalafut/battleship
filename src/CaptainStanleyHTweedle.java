@@ -1,4 +1,4 @@
-
+ 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Random;
@@ -81,6 +81,11 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
         }
 
         placement = possibleFleets.pollLast();
+        if (placement.score < 45) {
+            generateFleets();
+            placement = possibleFleets.pollLast();
+            System.out.println("Resetting");
+        }
         for (int ship = 0; ship < 5; ship++) {
             myFleet.placeShip(placement.thisPlacement[ship] % 10, (placement.thisPlacement[ship] / 10) % 10, (placement.thisPlacement[ship] / 100), ship);
         }
