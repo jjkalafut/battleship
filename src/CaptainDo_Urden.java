@@ -19,17 +19,17 @@ public class CaptainDo_Urden implements Captain {
     private ArrayList<ArrayList<Coordinate>> 	hitShips;
     private ArrayList<ArrayList<Placement>> 	theirPlacements;
     private int[]								accuracy; //0 is hits 1 is shots
-    private double[][]							lastTen;
-    private double[]							lastTenVal;
-    private int									lastTenIdx;
+    private double[][][]						lastTen;
+    private double[][]							lastTenVal;
+    private int[]								lastTenIdx;
     private boolean 							wasWin;
     private int 								turnNum;
-    private double[][][]						currentHeat;
     private ArrayList<AttackType>				attackMethods;
     private SuperMegaShipPlacer_3000 			sp;
     private Random								rGen;
     private int									match_num;
     private int[]								atk_used;
+    private final int							atk_strats = 4;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -48,11 +48,11 @@ public class CaptainDo_Urden implements Captain {
 
         if (!opponent.equals(this.lastOpponent)) {
         	       	
-            this.lastTen = new double[10][4];
-            this.lastTenVal = new double[4];
-            this.atk_used = new int[4];
-            this.lastTenIdx = 0;
-        	this.accuracy = new int[4];
+            this.lastTen = new double[10][atk_strats][5];
+            this.lastTenVal = new double[atk_strats][5];
+            this.atk_used = new int[atk_strats];
+            this.lastTenIdx = new int[5];
+        	this.accuracy = new int[atk_strats];
             this.wasWin = false;
             this.their_hits = new int[10][10];
             this.their_misses = new int [10][10];
@@ -341,15 +341,24 @@ public class CaptainDo_Urden implements Captain {
 		*/
         double best_val = 0;
         int idx = 0;
-        for( int j = 0; j < this.lastTenVal.length; j++){
-        	if( this.lastTenVal[j] > best_val){
-        		best_val = this.lastTenVal[j];
-        		idx = j;
+        double turn_heat[][][] = new double[10][10][5];
+        for( int j = 0; j < 5; j++){
+        	idx = 0;
+        	best_val = 0;
+        	for( int k=0; k < atk_strats; k++){
+	        	if( this.lastTenVal[k][j] > best_val){
+	        		best_val = this.lastTenVal[k][j];
+	        		idx = k;	        		
+	        	}
         	}
+        	double temp[][][] = this.attackMethods.get(idx).getHeat();
+        	for( int l = 0; l < 100; l++){
+        		turn_heat[l%10][l/10][j] = temp[l%10][l/10][idx];
+        	}
+        	this.atk_used[idx]++;
         }
-        this.atk_used[idx]++;
-        this.currentHeat = this.attackMethods.get(idx).getHeat();
-        createPlacements(this.currentHeat, this.theirPlacements);
+        
+        createPlacements(turn_heat, this.theirPlacements);
 
         rGen = new Random();
         this.myFleet = sp.getNextPlacement(this.wasWin, this.turnNum);
@@ -358,7 +367,7 @@ public class CaptainDo_Urden implements Captain {
         
         if( this.match_num == numMatches -1){
         	for( int i = 0; i < this.atk_used.length; i++){
-        		System.out.println("Used Attack "+ i +" "+(float) this.atk_used[i]/(float)this.match_num+"% of the time.");
+        		System.out.println("Used Attack "+ i +" "+(float) this.atk_used[i]/(5*(float)this.match_num)+"% of the time.");
         	}
         }
     }
@@ -538,12 +547,12 @@ public class CaptainDo_Urden implements Captain {
         	for( AttackType pat : this.attackMethods){
             	double val = pat.getHeat()[this.lastShot.getX()][this.lastShot.getY()][shipMod];
             	//System.out.println(this.lastTen[this.lastTenIdx][this.attackMethods.indexOf(pat)]);
-            	this.lastTenVal[this.attackMethods.indexOf(pat)] -= this.lastTen[this.lastTenIdx][this.attackMethods.indexOf(pat)];
-            	this.lastTenVal[this.attackMethods.indexOf(pat)] += val;
-            	this.lastTen[this.lastTenIdx][this.attackMethods.indexOf(pat)] = val;
+            	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] -= this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod];
+            	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] += val;
+            	this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod] = val;
             	pat.shotHere( true, shipMod, this.lastShot );
             }
-        	this.lastTenIdx = (this.lastTenIdx + 1) % 10;
+        	this.lastTenIdx[shipMod] = (this.lastTenIdx[shipMod] + 1) % 10;
 
             if (result >= 20) {
 
