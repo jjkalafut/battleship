@@ -1,4 +1,4 @@
- 
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Random;
@@ -9,15 +9,14 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
     protected Random generator;
     protected Fleet myFleet;
     final int[] shipLengths = new int[]{2, 3, 3, 4, 5};
-    final int fleetSize = 10000;
+    final int fleetSize = 500, cycleLength = 20;
     ArrayList<square> board;
     ArrayList<ArrayList<localShip>> shipModels;
     ArrayList<square> queue;
     square lastAttack;
-    int numOpponentAttacks, numMyAttacks;
-    int smallestShipLength;
+    int numOpponentAttacks, numMyAttacks, smallestShipLength, numGames, identityCounter;
     fleetPlacement placement;
-    TreeSet<fleetPlacement> possibleFleets;
+    ArrayList<TreeSet<fleetPlacement>> possibleFleets;
     int[] numShips;
     boolean[] hitShips;
     boolean readQueue;
@@ -40,6 +39,8 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
         readQueue = true;
 
         if (!currentOpponent.equals(opponent)) {
+            numGames = 0;
+            identityCounter = 0;
             currentOpponent = opponent;
             board = new ArrayList<>();
             for (int i = 0; i < 100; i++) {
@@ -80,12 +81,7 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
             }
         }
 
-        placement = possibleFleets.pollLast();
-        if (placement.score < 45) {
-            generateFleets();
-            placement = possibleFleets.pollLast();
-            System.out.println("Resetting");
-        }
+        placement = possibleFleets.get(numGames % cycleLength).pollLast();
         for (int ship = 0; ship < 5; ship++) {
             myFleet.placeShip(placement.thisPlacement[ship] % 10, (placement.thisPlacement[ship] / 10) % 10, (placement.thisPlacement[ship] / 100), ship);
         }
@@ -168,35 +164,49 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
         } else if (numOpponentAttacks > placement.score) {
             placement.score = numOpponentAttacks;
         }
-        possibleFleets.add(placement);
+        if (placement.score < 40) {
+            possibleFleets.get(numGames % cycleLength).add(new fleetPlacement(getRandomPlacement(), identityCounter));
+            identityCounter++;
+        } else {
+            possibleFleets.get(numGames % cycleLength).add(placement);
+        }
+        numGames++;
     }
 
     void generateFleets() {
-        Fleet tempFleet;
-        possibleFleets = new TreeSet<>(new Comparator<fleetPlacement>() {
-            @Override
-            public int compare(fleetPlacement fp1, fleetPlacement fp2) {
-                if (fp1.score != fp2.score) {
-                    return fp1.score - fp2.score;
-                } else {
-                    return fp1.identifier - fp2.identifier;
+        possibleFleets = new ArrayList<>();
+        for (int j = 0; j < cycleLength; j++) {
+            possibleFleets.add(new TreeSet<>(new Comparator<fleetPlacement>() {
+                @Override
+                public int compare(fleetPlacement fp1, fleetPlacement fp2) {
+                    if (fp1.score != fp2.score) {
+                        return fp1.score - fp2.score;
+                    } else {
+                        return fp1.identifier - fp2.identifier;
+                    }
                 }
+            }));
+            for (int i = 0; i < fleetSize; i++) {
+                possibleFleets.get(j).add(new fleetPlacement(getRandomPlacement(), identityCounter));
+                identityCounter++;
             }
-        });
-        int x, y, orientation;
-        for (int i = 0; i < fleetSize; i++) {
-            int[] temp = new int[5];
-            tempFleet = new Fleet();
-            for (int ship = 0; ship < 5; ship++) {
-                do {
-                    x = generator.nextInt(10);
-                    y = generator.nextInt(10);
-                    orientation = generator.nextInt(2);
-                } while (!tempFleet.placeShip(x, y, orientation, ship));
-                temp[ship] = x + 10 * y + 100 * orientation;
-            }
-            possibleFleets.add(new fleetPlacement(temp, i));
         }
+    }
+
+    int[] getRandomPlacement() {
+        Fleet tempFleet;
+        int x, y, orientation;
+        int[] temp = new int[5];
+        tempFleet = new Fleet();
+        for (int ship = 0; ship < 5; ship++) {
+            do {
+                x = generator.nextInt(10);
+                y = generator.nextInt(10);
+                orientation = generator.nextInt(2);
+            } while (!tempFleet.placeShip(x, y, orientation, ship));
+            temp[ship] = x + 10 * y + 100 * orientation;
+        }
+        return temp;
     }
 
     public void makeQueue() {
