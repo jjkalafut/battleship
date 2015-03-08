@@ -3,7 +3,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 
-public class CaptainDo_Urden implements Captain {
+public class CaptainNoTime implements Captain {
 
 	private 									Random rgen;
 	protected final int[] 						shipLength = {2,3,3,4,5};
@@ -29,11 +29,12 @@ public class CaptainDo_Urden implements Captain {
     private Random								rGen;
     private int									match_num;
     private int[]								atk_used;
-    private final int							atk_strats = 4;
+    private final int							atk_strats = 3;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
 
+    	this.rGen = new Random();
         this.theirPlacements = new ArrayList<ArrayList<Placement>>();
         this.rgen = new Random();
         this.myFleet = new Fleet();
@@ -48,6 +49,7 @@ public class CaptainDo_Urden implements Captain {
 
         if (!opponent.equals(this.lastOpponent)) {
         	       	
+        	this.turnNum = 50;
             this.lastTen = new double[10][atk_strats][5];
             this.lastTenVal = new double[atk_strats][5];
             this.atk_used = new int[atk_strats];
@@ -60,8 +62,8 @@ public class CaptainDo_Urden implements Captain {
             this.their_miss_shots = 100;
             this.lastOpponent = opponent;
             for (int j = 0; j < 100; j++) {
-            this.their_hits[j % 10][j / 10] = 1;
-            this.their_misses[j % 10][j / 10] = 1;
+            this.their_hits[j % 10][j / 10] = rGen.nextInt(50);
+            this.their_misses[j % 10][j / 10] = rGen.nextInt(50);
             }
 	        /*---------------------Attack Patterns-----------
 	         * 
@@ -119,79 +121,6 @@ public class CaptainDo_Urden implements Captain {
 					return ret;
 				}
 				
-            });
-            this.attackMethods.add(new AttackType(){
-
-            	/* int 0 hits, int 1 shots, double 1 heat */
-            	private Coordinate[] oldShots = new Coordinate[500];
-            	private boolean[]oldHit = new boolean[500];
-            	private int[] shipHitMod = new int[500];
-            	private int shotIdx = 0;
-            	
-				@Override
-				public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
-					
-					if( !started ){
-						Arrays.fill(oldHit, false);
-						 for (int j = 0; j < 100; j++) {
-
-							 shipIntArrays[j % 10][j / 10][0][1] = 6;				                
-			                 for (int k = 0; k < 5; k++) {
-			                	 oldShots[j + (k*100)] = new Coordinate(j % 10,j / 10);
-			                	 shipIntArrays[j % 10][j / 10][k][0] = 1;
-			                	 shipDoubleArrays[j % 10][j / 10][k][0] = (double) shipIntArrays[j % 10][j / 10][k][0]/ (double) shipIntArrays[j % 10][j / 10][0][1];
-			                 }
-				          }
-
-						 started = true;
-					}
-
-					if( oldHit[shotIdx] ){
-						shipIntArrays[oldShots[shotIdx].getX()][oldShots[shotIdx].getY()][shipHitMod[shotIdx]][0]--;
-					}
-					shipIntArrays[oldShots[shotIdx].getX()][oldShots[shotIdx].getY()][0][1]--;
-					
-					shipIntArrays[c.getX()][c.getY()][0][1]++;
-					oldShots[shotIdx] = c;
-					oldHit[shotIdx] = false;
-					
-					if( wasHit ){
-						shipIntArrays[c.getX()][c.getY()][shipMod][0]++;
-						oldHit[shotIdx] = true;
-						shipHitMod[shotIdx] = shipMod;
-						
-					}
-					
-					shotIdx = (shotIdx + 1) % oldShots.length;
-					for( int m = 0; m < 5; m++){
-						shipDoubleArrays[c.getX()][c.getY()][m][0] = (double) shipIntArrays[c.getX()][c.getY()][m][0]/ (double) shipIntArrays[c.getX()][c.getY()][0][1];
-					}
-				}
-
-				@Override
-				public double[][][] getHeat() {
-					double [][][] ret = new double[10][10][5];
-					double biggest = 0;
-					for (int i = 0; i < 100; i++) {
-						for (int j = 0; j < 5; j++){
-							ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
-							if( shipDoubleArrays[i % 10][i / 10][j][0] > biggest ){
-								biggest = shipDoubleArrays[i % 10][i / 10][j][0];
-							}
-						}						
-					}
-					if( biggest == 0 ){
-						biggest = 1;
-					}
-					for (int i = 0; i < 100; i++) {
-						for (int j = 0; j < 5; j++){
-							ret[i % 10][i / 10][j] /= biggest;
-						}
-					}
-					return ret;
-				}
-				
-            	
             });
             this.attackMethods.add(new AttackType(){
 
@@ -324,21 +253,13 @@ public class CaptainDo_Urden implements Captain {
 	         */            
             this.attackMethods.get(0).init(1, 2);
             this.attackMethods.get(1).init(1, 2);
-            this.attackMethods.get(2).init(1, 2);
-            this.attackMethods.get(3).init(1, 1);
+            this.attackMethods.get(2).init(1, 1);
             this.match_num = 0;
             sp = new SuperMegaShipPlacer_3000();
         }
         else{
         	this.match_num++;
         }
-        /*
-        if( (this.match_num % 1000) == 0){
-        	for( int i = 0; i < this.attackMethods.size(); i++){
-        		System.out.println("Accuracy "+i+" = " + this.lastTenVal[i]);
-        	}
-        }
-		*/
         double best_val = 0;
         int idx = 0;
         double turn_heat[][][] = new double[10][10][5];
@@ -360,34 +281,14 @@ public class CaptainDo_Urden implements Captain {
         
         createPlacements(turn_heat, this.theirPlacements);
 
-        rGen = new Random();
+        
         this.myFleet = sp.getNextPlacement(this.wasWin, this.turnNum);
         //this.myFleet = getDistShipPlace();
         this.turnNum = 0;
         
-        if( this.match_num == numMatches -1){
-        	for( int i = 0; i < this.atk_used.length; i++){
-        		System.out.println("Used Attack "+ i +" "+(float) this.atk_used[i]/(5*(float)this.match_num)+"% of the time.");
-        	}
-        }
     }
 
-	private Fleet randomPlace(){
-    	Fleet fl = new Fleet();
-    	while (!fl.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), AIRCRAFT_CARRIER)) {
-        }
-        while (!fl.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), DESTROYER)) {
-        }
-        while (!fl.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), SUBMARINE)) {
-        }
-        while (!fl.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), BATTLESHIP)) {
-        }
-        while (!fl.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), PATROL_BOAT)) {
-        }
-        return fl;
-    }
-    
-    private void createPlacements(double[][][] scorer, ArrayList<ArrayList<Placement>> list) {
+	private void createPlacements(double[][][] scorer, ArrayList<ArrayList<Placement>> list) {
         for (int s = 0; s < 5; s++) {
             int shipLen = this.shipLength[s];
             ArrayList<Placement> places = new ArrayList<Placement>();
@@ -417,11 +318,6 @@ public class CaptainDo_Urden implements Captain {
             }
             list.add(places);
         }
-    }
-    
-    private void binaryPlace( ArrayList<Placement> ray, Placement p){
-    	int plc = getIndex( ray, (int) p.score, 0, ray.size() );
-    	ray.add(plc, p);
     }
     
     public int getIndex(ArrayList<Placement> ray, int score, int p, int q){
@@ -439,73 +335,6 @@ public class CaptainDo_Urden implements Captain {
 		}
 	}
     
-    //returns best placements for ship;
-    private void getBestPlacements(int[][] scorer, ArrayList<ArrayList<Placement>> list) {
-        for (int s = 0; s < 5; s++) {
-            int shipLen = this.shipLength[s];
-            ArrayList<Placement> places = new ArrayList<Placement>();
-            for (int i = 0; i < 11 - shipLen; i++) {
-                for (int j = 0; j < 10; j++) {
-                    Placement p = new Placement(0, s, new Coordinate(i, j));
-                    double score = 0;
-
-                    for (int k = 0; k < shipLen; k++) {
-                        score += scorer[i + k][j];
-                    }
-                    p.score = score;
-                    binaryPlace( places, p);
-                }
-            }
-            for (int j = 0; j < 11 - shipLen; j++) {
-                for (int i = 0; i < 10; i++) {
-                    Placement p = new Placement(1, s, new Coordinate(i, j));
-                    double score = 0;
-
-                    for (int k = 0; k < shipLen; k++) {
-                        score += scorer[i][j + k];
-                    }
-                    p.score = score;
-                    binaryPlace( places, p);
-                }
-            }
-            list.add(places);
-        }
-    }
-    
-    private void createPlacements(double[][][] scorer, double[][][] scorer_2, ArrayList<ArrayList<Placement>> list) {
-        for (int s = 0; s < 5; s++) {
-            int shipLen = this.shipLength[s];
-            ArrayList<Placement> places = new ArrayList<Placement>();
-            for (int i = 0; i < 11 - shipLen; i++) {
-                for (int j = 0; j < 10; j++) {
-                    Placement p = new Placement(0, s, new Coordinate(i, j));
-                    double score = 0;
-
-                    for (int k = 0; k < shipLen; k++) {
-                        score += scorer[i + k][j][s];
-                        score += scorer_2[i+k][j][s];
-                    }
-                    p.score = score;
-                    places.add(p);
-                }
-            }
-            for (int j = 0; j < 11 - shipLen; j++) {
-                for (int i = 0; i < 10; i++) {
-                    Placement p = new Placement(1, s, new Coordinate(i, j));
-                    double score = 0;
-
-                    for (int k = 0; k < shipLen; k++) {
-                        score += scorer[i][j + k][s];
-                        score += scorer_2[i][j + k][s];
-                    }
-                    p.score = score;
-                    places.add(p);
-                }
-            }
-            list.add(places);
-        }
-    }
-    
     @Override
     public Fleet getFleet() {
         return myFleet;
@@ -515,25 +344,7 @@ public class CaptainDo_Urden implements Captain {
     public Coordinate makeAttack() {
         this.turnNum++;
         Coordinate shot = new Coordinate(0, 0);
-        //ArrayList<Coordinate> possibles = new ArrayList<Coordinate>();
-        /*
-        double best = 0;
-        int best_idx_mod =0;
-        int best_idx_ship = 0;
-        if (!this.hitShips.isEmpty()) {
-            for (ArrayList<Coordinate> ship : this.hitShips) {
-                int shipMod = ship.get(0).getX();
-                ArrayList<Placement> places = this.theirPlacements.get(shipMod);
-                for (Placement p : places) {
-                    if(p.score > best){
-                    	best = p.score;
-                    	best_idx_mod = shipMod;
-                    	best_idx_ship = places.indexOf(p);
-                    }
-                }
-            }
-        }
-		*/
+        
         double[][] turnHeat = new double[10][10];
         for (int s = 4; s >= 0; s--) {
             if (this.shipsAlive[s]) {
@@ -548,24 +359,13 @@ public class CaptainDo_Urden implements Captain {
         int x = 0;
         int y = 0;
         double best = 0;
-        //if (possibles.isEmpty()) {
-            for (int i = 0; i < 100; i++) {
-                if (!this.myMatchShots[i % 10][i / 10] && turnHeat[i % 10][i / 10] >= best) {
-                    best = turnHeat[i % 10][i / 10];
-                    x = i % 10;
-                    y = i / 10;
-                }
-            }
-            /*} else {
-            for (Coordinate c : possibles) {
-                if (!this.myMatchShots[c.getX()][c.getY()] && turnHeat[c.getX()][c.getY()] >= best) {
-                    best = turnHeat[c.getX()][c.getY()];
-                    x = c.getX();
-                    y = c.getY();
-                }
+        for (int i = 0; i < 100; i++) {
+            if (!this.myMatchShots[i % 10][i / 10] && turnHeat[i % 10][i / 10] >= best) {
+                best = turnHeat[i % 10][i / 10];
+                x = i % 10;
+                y = i / 10;
             }
         }
-        */
         
         shot = new Coordinate(x,y);
         this.lastShot = shot;
@@ -575,7 +375,6 @@ public class CaptainDo_Urden implements Captain {
 
     @Override
     public void resultOfAttack(int result) {
-        //this.myShots[this.lastShot.getX()][this.lastShot.getY()]++;
     	int shipMod = result % 10;
         if (result == MISS || result == DEFEATED) {
         	
@@ -599,7 +398,6 @@ public class CaptainDo_Urden implements Captain {
         	
         	for( AttackType pat : this.attackMethods){
             	double val = pat.getHeat()[this.lastShot.getX()][this.lastShot.getY()][shipMod];
-            	//System.out.println(this.lastTen[this.lastTenIdx][this.attackMethods.indexOf(pat)]);
             	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] -= this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod];
             	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] += val;
             	this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod] = val;
@@ -674,22 +472,6 @@ public class CaptainDo_Urden implements Captain {
     @Override
     public void resultOfGame(int result) {
         this.wasWin = result == WON;
-        /* afterloss get data
-        if (!this.wasWin) {
-            for (ArrayList<Coordinate> ship : this.hitShips) {
-                int ind = ship.get(0).getX();
-                boolean[][][] stop = new boolean[10][10][5];
-                for (Placement p : this.theirPlacements.get(ind)) {
-                    for (Coordinate c : p.coords) {
-                        if (!this.myMatchShots[c.getX()][c.getY()] && !stop[c.getX()][c.getY()][ind]) {
-                            this.hitsHeat[c.getX()][c.getY()][ind]++;
-                            stop[c.getX()][c.getY()][ind] = true;
-                        }
-                    }
-                }
-            }
-        }
-        */
     }
 
     private class Placement {
@@ -750,13 +532,27 @@ public class CaptainDo_Urden implements Captain {
 		ret.substring(0, ret.length() -2);
 		return ret;
 	}
-	// influid placements dont add more, shop botom, add more, and keep using all
-	
-	//ONLY WORRY ABOUT BINS
+	public String printArray(boolean[] b){
+		String ret = "";
+		for( boolean f : b){
+			ret = ret.concat(f+", ");
+		}
+		ret.substring(0, ret.length() -2);
+		return ret;
+	}
+	public String printArray(boolean[][] b, int id_1){
+		String ret = "";
+		boolean[][] b2 = new boolean[10][10];
+		for( int l = 0; l < 100; l++){
+			b2[l/10][l%10] = b[l%10][l/10];
+		}
+		for( int i = 0; i < id_1; i++){
+			ret = ret.concat(printArray(b2[i])).concat("\n");
+		}
+		return ret;
+	}
 	private class SuperMegaShipPlacer_3000{
 		
-		//the weights to use for each metric
-		private float[] 					metricWeights;
 		//the number of placement "bins"-Seth Dutter I have
 		private int 						numberBins;
 		//the number of turns before I reselect which bin to use
@@ -775,13 +571,10 @@ public class CaptainDo_Urden implements Captain {
 		private int							total_turns;
 		private int							over_games;
 		private int							numberToGo;
-		private float						avg_mets;
 		private boolean						init;
 		
 		
 		public SuperMegaShipPlacer_3000(){
-			this.metricWeights = new float[]{ .5f, .5f, .3f, .5f, .8f, .2f};
-			this.avg_mets = .167f;
 			this.bins = new ArrayList<PlacementBin>();
 			this.scores = new ArrayList<Integer>();
 			this.numberBins = 2;
@@ -792,17 +585,16 @@ public class CaptainDo_Urden implements Captain {
 			
 			//create 2 new bins with 10 random maps each
 			//this should create a two bins to determine a good metric (well start determining anyway)
-			float[] rmeterics = new float[]{.5f,.5f,1f,.5f,.85f,.5f};
+			float[] rmeterics = new float[]{.3f,.7f,1f,.5f,.3f,.2f};
 			PlacementBin b1 = new PlacementBin(500,rmeterics);
 			this.bins.add(b1);
 			this.scores.add(50);
 			
-			rmeterics = new float[]{.5f,.5f,0f,.5f,.5f,.85f};
+			rmeterics = new float[]{.3f,.3f,.2f,.5f,.8f,.7f};
 			
 			PlacementBin b2 = new PlacementBin(500,rmeterics);
 			this.bins.add(b2);
-			this.scores.add(49);			
-			System.out.println("done with init");
+			this.scores.add(49);
 		}
 		public Fleet getNextPlacement(boolean won, int turns_taken){
 			this.numberMatch++;
@@ -810,8 +602,6 @@ public class CaptainDo_Urden implements Captain {
 			ShipMap place;
 			
 			this.total_turns += turns_taken;
-			
-			
 			if( won){
 				//replay same ship pattern	
 				this.consec_wins++;
@@ -820,17 +610,23 @@ public class CaptainDo_Urden implements Captain {
 				
 			}
 			else{
-				this.bins.get(0).rankPlace(turns_taken+this.consec_wins);
+				this.bins.get(0).rankPlace(turns_taken - this.consec_wins);
 				this.over_games += 2;		
 				place = this.bins.get(0).getShipMap();
 				this.last = place;
 				if( this.numberMatch >= matchRedist ){
-					System.out.println("Step 2");
+					//System.out.println("Step 2");
 					reThink();
+				}
+				else if( turns_taken < 35 ){
+					int new_score  = this.total_turns / this.over_games;
+					int new_ind = getInd(new_score,0,this.scores.size());
+					int old_score = this.scores.remove(0);
+					this.scores.add(new_ind,new_score);
+		    		this.bins.add(new_ind, this.bins.remove(0));
 				}
 				this.consec_wins = 0;
 			}
-			
 			for( int i = 0; i < 5; i++){
 				ret.placeShip(place.ships[i].c, place.ships[i].direction, i);
 			}
@@ -839,88 +635,29 @@ public class CaptainDo_Urden implements Captain {
 
 		private void reThink(){
 
-			System.out.println("Top Scores are: "+this.scores.get(0)+" and "+this.scores.get(1));
-			if(this.scores.get(0) > 4 +this.scores.get(1)){
-				this.scores.remove(1);
-				this.scores.add(1, this.scores.get(0)-4);
-			}
-			//TODO
-			if(this.scores.size() != this.bins.size()){
-				System.out.println("______VERY VERY BAD_______");
-			}
+			//System.out.println("Top Scores are: "+this.scores.get(0)+" and "+this.scores.get(1));
 			int new_score  = this.total_turns / this.over_games;
 			//changing bins, see if another bin is better that the current
 			int new_ind = getInd(new_score,0,this.scores.size());
 			int old_score = this.scores.remove(0);
-			System.out.println("bin with meterics "+printArray(this.bins.get(0).target_meterics)+" went from "+ old_score+" to "+new_score);
 			this.scores.add(new_ind,new_score);
     		this.bins.add(new_ind, this.bins.remove(0));
-			//evaluate how each bin is fairing compared with its meterics
-			float[] importance = new float[6];
-			//make each importance between 0 (none) and 1 (most)
-			importance[0] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[0]) * 2;
-			importance[1] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[1]) * 2;
-			importance[2] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[2]) * 2;
-			//importance[3] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[3]) * 2;
-			importance[4] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[4]) * 2;
-			importance[5] = Math.abs( .5f - this.bins.get(new_ind).target_meterics[5]) * 2;
+			this.numberToGo = this.total_turns / 20;
+			int amount = 25 - rGen.nextInt( 10 );
 			
-			float[] temp = Arrays.copyOf(importance, 6);
-			Arrays.sort(temp);
-			
-			float total = 0f;
-			for(int i = 0; i < 6; i++){
-				if( i == 3 ){
-					continue; //todo
-				}
-				if( new_score < old_score ){				
-					if( importance[i] == temp[0] || importance[i] == temp[1] ){
-						if( this.metricWeights[i] < .99f){
-							this.metricWeights[i] += .01f;
-						}					
-					}
-					else if( importance[i] == temp[4] || importance[i] == temp[5] ){
-						if( this.metricWeights[i] > .01f){
-							this.metricWeights[i] -= .01f;
-						}
-					}
-				
-				}
-				else{
-					if( importance[i] == temp[0] || importance[i] == temp[1] ){
-						if( this.metricWeights[i] > .01f){
-							this.metricWeights[i] -= .01f;
-						}				
-					}
-					else if( importance[i] == temp[4] || importance[i] == temp[5] ){
-						if( this.metricWeights[i] < .99f){
-							this.metricWeights[i] += .01f;
-						}
-					}
-				}
-				System.out.println("New Meteric weight "+i+" is "+this.metricWeights[i]);
-				total += this.metricWeights[i];
-			}
-			
-			this.avg_mets = total/ 6f;
-			//set match redist to a good value. if the enemy is switching fast, go faster. if switching slow, use less bins. Figues this out from the drop of the bin score over the last dist period.
-			this.numberToGo = (this.total_turns / this.over_games) * 256;
-			this.matchRedist = this.numberMatch + this.numberToGo; //max is appox 20000
-			//maybe set bin# to 1000000 / match redist as to not waste resources?
-			int amount = 50000 / this.numberToGo;
-			System.out.println("Setting bin# to: "+amount);
 			setBins( amount );
-
+			setBins( 25 );
+			this.matchRedist = this.numberMatch + 20 * numberToGo;
+			
 			this.init = false;
-			//maybe drop the worst bins. if creating more Use similarity and meteric weights. 
-			//number of placements per bin should be .5 * the number of matches its expected to go
+			
 			this.over_games = 0;
 			this.total_turns = 0;
 		}
 		
 		private void setBins( int i ){			
 			while( i > this.numberBins ){
-				int bin_size = this.numberToGo/2;
+				int bin_size = this.numberToGo;
 				this.bins.get(0).setSize(bin_size);
 				//create new meterics different from others;
 				float[] newMets  = new float[6];
@@ -930,21 +667,20 @@ public class CaptainDo_Urden implements Captain {
 				newMets[1] = rgen.nextFloat();
 				newMets[2] = rgen.nextFloat();	
 				newMets[3] = rgen.nextFloat();	
-				newMets[4] = rgen.nextFloat();
-				newMets[5] = rgen.nextFloat();			
+				newMets[4] = (this.bins.get(0).target_meterics[4] + (rGen.nextBoolean() ? .2f : 0f) ) % 1f;
+				newMets[5] = (this.bins.get(0).target_meterics[5] + .2f) % 1f;			
 				
-				PlacementBin b = new PlacementBin(bin_size, newMets);
+				PlacementBin b = new PlacementBin(bin_size, newMets );
 				int score;
 				if(this.init){
 					score = 40;
 				}
 				else{
-					score = this.scores.get(1+rgen.nextInt(this.bins.size()-1));
+					score = 1+ this.scores.get(0);
 				}
-				int place_ind = getInd(score,0,this.bins.size());
 
-				this.bins.add(place_ind, b);
-				this.scores.add(place_ind, score);		
+				this.bins.add(0, b);
+				this.scores.add(0, score);		
 				this.numberBins++;
 			}
 			while( i < this.numberBins){
@@ -1007,161 +743,42 @@ public class CaptainDo_Urden implements Captain {
 		public ShipMap getShipMap(){
 			return ships.get(0);
 		}
+		
 		public void setSize(int i){
 			while( ships.size() < i){
-				//decide to place ships via XY or hits or misses; ignoring together/apart for now. 
-				double decideXY = ((.5 - Math.abs(.5 - target_meterics[4])) + (.5 - Math.abs(.5 - target_meterics[5]))) / 2.0; 
-				double decideHit = (.5 - Math.abs(.5 - target_meterics[0]));
-				double decideMiss = (.5 - Math.abs(.5 - target_meterics[1]));
-				if( decideXY > decideHit && decideXY > decideMiss ){
-					generateNewXY();
-				}
-				else if( decideHit > decideMiss ){
-					generateNewHit();
-				}
-				else{
-					generateNewMiss();
-				}
+				generateNewXY();
 			}
 			while( i < ships.size() ){
 				ships.remove(ships.size() - 1);
 				pscores.remove(this.pscores.size()-1);
 			}
 		}
-		private void generateNewHit(){
-			ShipMap sm1 = new ShipMap();
-			// go through ships and try to place them as best as possible. start small?
-			boolean[][] valid = new boolean[10][10];
-			Arrays.fill(valid, true);
-			
-			ArrayList<ArrayList<Placement>> listPlaces = new ArrayList<ArrayList<Placement>>();
-			getBestPlacements( their_hits, listPlaces );
-			for( int i = 0; i < 5; i++){
-				if( this.target_meterics[0] > .7 ){
-					for( Placement p : listPlaces.get(i) ){
-						boolean placed = true;
-						for( int j = 0; j < shipLength[i]; j++){
-							if( !valid[p.coords[j].getX()][p.coords[j].getY()] ){
-								placed = false;
-								break;
-							}
-						}
-						if( placed ){
-							for( Coordinate c : p.coords ){
-								valid[c.getX()][c.getY()] = false;
-							}
-							sm1.ships[i] = new TinyShip(p.coords[0], p.direc );
-							break;
-						}						
-					}
-				}
-				else{
-					for( int q = listPlaces.get(i).size()-1; q >= 0; q--){
-						Placement p = listPlaces.get(i).get(q);
-						boolean placed = true;
-						for( int j = 0; j < shipLength[i]; j++){
-							if( !valid[p.coords[j].getX()][p.coords[j].getY()] ){
-								placed = false;
-								break;
-							}
-						}
-						if( placed ){
-							for( Coordinate c : p.coords ){
-								valid[c.getX()][c.getY()] = false;
-							}
-							sm1.ships[i] = new TinyShip(p.coords[0], p.direc );
-							break;
-						}
-					}
-				}
-			}
-		}
-		
-		private void generateNewMiss(){
-			ShipMap sm1 = new ShipMap();
-			// go through ships and try to place them as best as possible. start small?
-			boolean[][] valid = new boolean[10][10];
-			Arrays.fill(valid, true);
-			
-			ArrayList<ArrayList<Placement>> listPlaces = new ArrayList<ArrayList<Placement>>();
-			getBestPlacements( their_misses, listPlaces );
-			for( int i = 0; i < 5; i++){
-				if( this.target_meterics[0] > .4 ){
-					for( Placement p : listPlaces.get(i) ){
-						boolean placed = true;
-						for( int j = 0; j < shipLength[i]; j++){
-							if( !valid[p.coords[j].getX()][p.coords[j].getY()] ){
-								placed = false;
-								break;
-							}
-						}
-						if( placed ){
-							for( Coordinate c : p.coords ){
-								valid[c.getX()][c.getY()] = false;
-							}
-							sm1.ships[i] = new TinyShip(p.coords[0], p.direc );
-							break;
-						}						
-					}
-				}
-				else{
-					for( int q = listPlaces.get(i).size()-1; q >= 0; q--){
-						Placement p = listPlaces.get(i).get(q);
-						boolean placed = true;
-						for( int j = 0; j < shipLength[i]; j++){
-							if( !valid[p.coords[j].getX()][p.coords[j].getY()] ){
-								placed = false;
-								break;
-							}
-						}
-						if( placed ){
-							for( Coordinate c : p.coords ){
-								valid[c.getX()][c.getY()] = false;
-							}
-							sm1.ships[i] = new TinyShip(p.coords[0], p.direc );
-							break;
-						}
-					}
-				}
-			}
-		}
-		
 		private void generateNewXY(){ 
-			//TODO generate the map not randomly
-			/*
-			ShipMap sm1 = randomMap();
-			int difs = getDifferences(sm1.metrics,this.target_meterics, .1f);
-			int breaknum = 0;
-			while( difs == 0){
-				breaknum++;
-				if(breaknum == 1000){
-					System.out.println("cant get more of this meteric "+ printArray(this.target_meterics));
-					this.ships.clear();
-					this.target_meterics[0] = rgen.nextFloat();
-					this.target_meterics[1] = rgen.nextFloat();
-					this.target_meterics[2] = rgen.nextFloat();	
-					this.target_meterics[3] = rgen.nextFloat();	
-					this.target_meterics[4] = rgen.nextFloat();
-					this.target_meterics[5] = rgen.nextFloat();
-					breaknum = 0;
-				}
-				sm1 = randomMap();
-				difs = getDifferences(sm1.metrics,this.target_meterics, .1f);
-			}
 			
-			*/
 			ShipMap sm1 = new ShipMap();
 			// go through ships and try to place them as best as possible. start small?
 			boolean[][] valid = new boolean[10][10];
-			Arrays.fill(valid, true);
+			for( int g = 0; g < 10; g++){
+				Arrays.fill(valid[g], true);
+			}
 			
 			for( int i = 0; i < 5; i++){
-				if( rGen.nextInt(25) < 6 ){
-					// ~24% chance of random place
-					sm1.place( i );
-					continue;
-				}
 				int len = shipLength[i];
+				if( rGen.nextInt(25) < 9 ){
+					// ~32% chance of random place
+					sm1.place( i, valid );
+					if( sm1.ships[i].direction == 1){
+						for( int k = 0 ; k < len; k++){
+							valid[sm1.ships[i].c.getX()][sm1.ships[i].c.getY()+k] = false;
+						}
+					}
+					else{
+						for( int k = 0 ; k < len; k++){
+							valid[sm1.ships[i].c.getX()+k][sm1.ships[i].c.getY()] = false;
+						}
+					}
+					continue;
+				}				
 				float half = (5*this.target_meterics[2]);
 				float horizon =  (half + rgen.nextInt((int)half+1));// get a random number based off ship hor/verticle 
 				if( horizon < 3.75 ){
@@ -1182,6 +799,12 @@ public class CaptainDo_Urden implements Captain {
 						}
 						
 						int y = (int) ( posy + 10 * target_meterics[5] );
+						if( y < 0 ){
+							y = 0;
+						}
+						else if ( y > 9){
+							y = 9;
+						}
 						
 						boolean val = true;
 						for( int j = 0; j < len; j++){
@@ -1191,6 +814,9 @@ public class CaptainDo_Urden implements Captain {
 							}
 						}
 						if(val){
+							for( int k = 0 ; k < len; k++){
+								valid[x+k][y] = false;
+							}
 							sm1.ships[i] = new TinyShip(new Coordinate(x,y), 0);
 							placed = true;
 							break;
@@ -1198,7 +824,17 @@ public class CaptainDo_Urden implements Captain {
 						cnt++;
 					}
 					if( !placed ){
-						sm1.place(i);
+						sm1.place(i, valid);
+						if( sm1.ships[i].direction == 1){
+							for( int k = 0 ; k < len; k++){
+								valid[sm1.ships[i].c.getX()][sm1.ships[i].c.getY()+k] = false;
+							}
+						}
+						else{
+							for( int k = 0 ; k < len; k++){
+								valid[sm1.ships[i].c.getX()+k][sm1.ships[i].c.getY()] = false;
+							}
+						}
 					}
 					
 				}
@@ -1207,8 +843,8 @@ public class CaptainDo_Urden implements Captain {
 					boolean placed = false;
 					while(cnt < 20){
 						//find a ship x place
-						int posy = 2 - rGen.nextInt(5); // [-1,1]
-						int posx = 1 - rGen.nextInt(3); // [-1,1]
+						int posx = 2 - rGen.nextInt(5); // [-2,2]
+						int posy = 1 - rGen.nextInt(3); // [-1,1]
 						int y  = (int) ( posy + ( ((10 * target_meterics[5]) - len/2) ) );
 						//check if over edge
 						if( y < 0 ){
@@ -1218,7 +854,13 @@ public class CaptainDo_Urden implements Captain {
 							y = 10 - len;
 						}
 						
-						int x = (int) ( posx + 10 * target_meterics[5] );
+						int x = (int) ( posx + 10 * target_meterics[4] );
+						if( x < 0 ){
+							x = 0;
+						}
+						else if( x > 9){
+							x = 9;
+						}
 						
 						boolean val = true;
 						for( int j = 0; j < len; j++){
@@ -1228,6 +870,9 @@ public class CaptainDo_Urden implements Captain {
 							}
 						}
 						if(val){
+							for( int k = 0 ; k < len; k++){
+								valid[x][y+k] = false;
+							}
 							sm1.ships[i] = new TinyShip(new Coordinate(x,y), 1);
 							placed = true;
 							break;
@@ -1235,76 +880,33 @@ public class CaptainDo_Urden implements Captain {
 						cnt++;
 					}
 					if( !placed ){
-						sm1.place(i);
+						sm1.place(i, valid);
+						if( sm1.ships[i].direction == 1){
+							for( int k = 0 ; k < len; k++){
+								valid[sm1.ships[i].c.getX()][sm1.ships[i].c.getY()+k] = false;
+							}
+						}
+						else{
+							for( int k = 0 ; k < len; k++){
+								valid[sm1.ships[i].c.getX()+k][sm1.ships[i].c.getY()] = false;
+							}
+						}
 					}
 				}
 			}
-			sm1.MetericMap(their_hits, their_misses );
-			int scr = 45 + rgen.nextInt(10);
-			int place = getPlaceInd(scr,0,this.pscores.size());
-			ships.add(place,sm1);		
-			this.pscores.add(place,scr);
+			int spots = 0;
+			for( int h = 0; h < 100; h++){
+				if( !valid[h/10][h%10]){
+					spots++;
+				}
+			}
+			if( spots != 17 ){
+				//System.out.println(printArray(valid,10));
+			}
+			int scr = 45;
+			ships.add(0,sm1);		
+			this.pscores.add(0,scr);
 			
-		}
-		//usually m2 is traget meterics
-		private int getDifferences(float[] m1, float[] m2, float comp){
-			int ret = 0;
-			//TODO
-			//int ind = 0;
-			for( int n = 0; n < 6; n++){
-				float diff = Math.abs( m2[n] - m1[n] );
-				if(diff > comp ){
-					ret++;
-				}
-			}
-			//System.out.println("worst INdex: "+ind);
-			return ret;
-		}
-		private ShipMap randomMap(){
-			ShipMap ret = new ShipMap();
-			boolean[][] ships = new boolean[10][10];
-			for( int i = 0; i < 5; i++){
-				int ship_len = shipLength[i];
-				boolean hor_place = rgen.nextBoolean();
-				boolean placed = false;
-				while( !placed){
-					placed = true;
-					if(hor_place){
-						int x = rgen.nextInt(11-ship_len);
-						int y = rgen.nextInt(10);
-						for( int j = 0; j < ship_len; j++){
-							if(ships[x+j][y]){
-								placed = false;
-								break;
-							}
-						}
-						if(placed){
-							ret.ships[i] = new TinyShip(new Coordinate(x,y), 0);
-							for( int j = 0; j < ship_len; j++){
-								ships[x+j][y] = true;
-							}
-						}
-					}
-					else{
-						int x = rgen.nextInt(10);
-						int y = rgen.nextInt(11-ship_len);
-						for( int j = 0; j < ship_len; j++){
-							if(ships[x][y+j]){
-								placed = false;
-								break;
-							}
-						}
-						if(placed){
-							ret.ships[i] = new TinyShip(new Coordinate(x,y), 1);
-							for( int j = 0; j < ship_len; j++){
-								ships[x][y+j] = true;
-							}
-						}
-					}
-				}
-			}
-			ret.MetericMap(their_hits, their_misses );
-			return ret;
 		}
 		
 	}
@@ -1319,31 +921,15 @@ public class CaptainDo_Urden implements Captain {
 		 * 4 = avg ship location x
 		 * 5 = ||                y
 		 */
-		public TinyShip[] ships;		
-		public float[] metrics;		
+		public TinyShip[] ships;	
 		
 		public ShipMap(){
 			this.ships = new TinyShip[5];
-			this.metrics = new float[6];
 		};
 		
-		public void place( int shipMod ){
+		public void place( int shipMod, boolean[][] valid ){
 			// check sonly indicies less than the given. i.e. don't place 5 then try to place 4;
-			boolean valid[][] = new boolean[10][10];
-			Arrays.fill(valid, true);
-			
-			for( int i = 0; i < shipMod; i++){
-				TinyShip p = this.ships[i];
-				for( int j = 0; j < shipLength[i]; j++ ){
-					if( p.direction == 0 ){
-						valid[p.c.getX() + j ][ p.c.getY() ] = false;
-					}
-					else{
-						valid[p.c.getX() ][ p.c.getY() + j ] = false;
-					}
-				}
-			}
-		
+			//System.out.println(" random placed "+ shipMod);
 			boolean placed = false;
 			int x = 0;
 			int y = 0;
@@ -1359,7 +945,7 @@ public class CaptainDo_Urden implements Captain {
 							val = false;
 							break;
 						}
-					}
+					}					
 				}
 				else{
 					x = rGen.nextInt( 11 - shipLength[shipMod] );
@@ -1369,75 +955,11 @@ public class CaptainDo_Urden implements Captain {
 							val = false; 
 							break;
 						}
-					}
+					}					
 				}
-				placed = val;				
+				placed = val;					
 			}
 			this.ships[shipMod] = new TinyShip(new Coordinate(x,y), vert ? 1 : 0 );
-		}
-		public void MetericMap( int[][] enemy_hit, int[][] enemy_miss ){
-
-			int max_hits = 0;
-			int max_miss = 0;
-			for( int mm = 0; mm < 100; mm++){
-				int xm = mm % 10;
-				int ym = mm / 10;
-				if( enemy_hit[xm][ym] > max_hits ){
-					max_hits = enemy_hit[xm][ym];
-				}
-				if( enemy_miss[xm][ym] > max_miss ){
-					max_miss = enemy_miss[xm][ym];
-				}
-			}
-			
-			boolean[][] map  = new boolean[10][10];
-			//boolean[][] nextTo  = new boolean[10][10];
-			int total_x = 0;
-			int total_y = 0;
-			int hits = 0;
-			int misses = 0;
-			for( int i = 0; i < 5; i++){
-				int ship_len = shipLength[i];
-				int x = this.ships[i].c.getX();
-				int y = this.ships[i].c.getY();
-				
-				if(this.ships[i].direction == 1){
-					this.metrics[2] += .2;	//verticle = 1 so only add for verticel				
-					
-					//if(y > 0){nextTo[x][y-1] = true;}
-					//if(y < 9 ){nextTo[x][y+1] = true;}
-					
-					for( int j = 0; j < ship_len; j++){
-						total_x += x;
-						total_y += y+j;
-						//hits += enemy_hit[x][y+j];
-						//misses += enemy_miss[x][y+j];
-						//if(nextTo[x][y+j]){ this.metrics[3] += .083f; }
-						map[x][y+j] = true;						
-						//if( x > 0){nextTo[x-1][y+j] = true;}
-						//if( x < 9){nextTo[x+1][y+j] = true;}
-					}
-				}
-				else{					
-					//if(x > 0){nextTo[x-1][y] = true;}
-					//if(x < 9 ){nextTo[x+1][y] = true;}
-					
-					for( int j = 0; j < ship_len; j++){
-						total_x += x+j;
-						total_y += y;
-						//hits += enemy_hit[x+j][y];
-						//misses += enemy_miss[x+j][y];
-						//if(nextTo[x+j][y]){ this.metrics[3] += .083f; }
-						map[x+j][y] = true;						
-						//if( y > 0){nextTo[x+j][y-1] = true;}
-						//if( y < 9){nextTo[x+j][y+1] = true;}
-					}
-				}
-			}
-		this.metrics[4] = (float) total_x / 146f;
-		this.metrics[5] = (float) total_y / 146f;
-		this.metrics[0] = (float) hits / ( 4f * max_hits );
-		this.metrics[1] = (float) misses / ( 4f * max_miss );
 		}
 	}
 	
