@@ -58,7 +58,7 @@ public class CaptainNolan implements Captain {
         	for( int k=0; k < attackMethods.size(); k++){
 	        	if( this.lastTenVal[k][j] > best_val){
 	        		best_val = this.lastTenVal[k][j];
-	        		idx = k;	        		
+	        		idx = k;
 	        	}
         	}
         	double temp[][][] = this.attackMethods.get(idx).getHeat();
@@ -332,6 +332,45 @@ public class CaptainNolan implements Captain {
 			}
 			
         });
+        /*---------------------Attack Pattern 4-----------
+         * what do...
+         */
+        this.attackMethods.add(new NolanAttackType(){
+
+        	/* int 0 washits, int 1 nowhit, int 2 heading */
+			@Override
+			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
+				
+			}
+
+			@Override
+			public double[][][] getHeat() {
+				double [][][] ret = new double[10][10][5];
+				double[][] basic = new double[][]{
+						{0,	.1,	.2,	.3, .4, .4, .3, .2, .1, 0},
+						{.1, .2, .3, .4, .5, .5, .4, .3, .2, .1},
+						{.2, .3, .4, .5, .6, .6, .5, .4, .3, .2},
+						{.3, .4, .5, .6, .7, .7, .6, .5, .4, .3},
+						{.4, .5, .6, .7, .8, .8, .7, .6, .5, .4},
+						{.4, .5, .6, .7, .8, .8, .7, .6, .5, .4},
+						{.3, .4, .5, .6, .7, .7, .6, .5, .4, .3},
+						{.2, .3, .4, .5, .6, .6, .5, .4, .3, .2},
+						{.1, .2, .3, .4, .5, .5, .4, .3, .2, .1},
+						{0,	.1,	.2,	.3, .4, .4, .3, .2, .1, 0}
+				};
+				for( int i = 0; i < 100; i++){
+					ret[i/10][i%10][0] = basic[i/10][i%10];
+					ret[i/10][i%10][1] = basic[i/10][i%10];
+					ret[i/10][i%10][2] = basic[i/10][i%10];
+					ret[i/10][i%10][3] = basic[i/10][i%10];
+					ret[i/10][i%10][4] = basic[i/10][i%10];
+				}
+				
+				return ret;
+				
+			}
+			
+        });
         
         this.lastTen = new double[10][attackMethods.size()][5];
         this.lastTenVal = new double[attackMethods.size()][5];
@@ -344,6 +383,7 @@ public class CaptainNolan implements Captain {
         this.attackMethods.get(0).init(1, 2);
         this.attackMethods.get(1).init(1, 2);
         this.attackMethods.get(2).init(1, 1);
+        this.attackMethods.get(3).init(0, 0);
         this.match_num = 0;
     }
 
@@ -483,7 +523,7 @@ public class CaptainNolan implements Captain {
 
     @Override
     public void resultOfGame(int result) {
-        this.wasWin = result == WON;
+        this.wasWin = ( result == WON );
     }
 	
 	private class NolanPlacement {
