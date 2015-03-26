@@ -27,6 +27,7 @@ public class CaptainNolan implements Captain {
     private Random								rGen;
     private int									match_num;
     private int[]								atk_used;
+    private NolanTree							treeOfLife;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -84,6 +85,7 @@ public class CaptainNolan implements Captain {
         	}
         }
         
+        this.myFleet = treeOfLife.getFleet();
     }
     
     private Fleet randomFleet(){
@@ -130,7 +132,7 @@ public class CaptainNolan implements Captain {
        	 * 
        	 -----------------------------------------------------------------*/
     	this.turnNum = 50;
-        
+        this.treeOfLife = new NolanTree();
         this.wasWin = false;
         this.their_hits = new int[10][10];
         this.their_misses = new int [10][10];
@@ -525,6 +527,7 @@ public class CaptainNolan implements Captain {
     @Override
     public void resultOfGame(int result) {
         this.wasWin = ( result == WON );
+        this.treeOfLife.place( this.turnNum );
     }
 	
 	private class NolanPlacement {
@@ -588,6 +591,7 @@ public class CaptainNolan implements Captain {
 	private class NolanTree{
 		
 		private ArrayList<List<NolanNode<Short>>> levels;
+		short[] lastSeq;
 		
 		public NolanTree(){
 			//create levels to store ship config ind's
@@ -600,14 +604,15 @@ public class CaptainNolan implements Captain {
 			
 		}
 		
-		public void place( short[] lastSeq, int numTurns){
+		public void place( int numTurns){
 			
 			int ind = Arrays.binarySearch(levels.get(0).toArray(), lastSeq[0]);
 			
 			if( ind < 0){
 				NolanNode<Short> temp = new NolanNode<Short>();
 				temp.data = lastSeq[0];
-				levels.get(0).add( -1 * ind, temp);
+				ind = (-1 * ind) - 1;
+				levels.get(0).add( ind, temp);
 			}
 			
 			int lastInd = ind;
@@ -618,19 +623,19 @@ public class CaptainNolan implements Captain {
 							
 				NolanNode<Short> currentNode = levels.get(i).get(lastInd);
 				
-				int childInd = Arrays.binarySearch(indToNode(currentNode.children, levels.get(i) ).toArray(), lastSeq[i+1]);
-				if( childInd > 0){
+				int childInd = Arrays.binarySearch(indToNode(currentNode.children, levels.get(i+1) ).toArray(), lastSeq[i+1]);
+				if( childInd >= 0){
 					currentNode.turns.set(childInd, (byte) numTurns);
 				}
 				else{
-					childInd = (-1*childInd);
+					childInd = (-1*childInd) - 1;
 					int childLevelInd = Arrays.binarySearch(levels.get(i+1).toArray(), lastSeq[i+1]);
-					if( childLevelInd > 0 ){
+					if( childLevelInd >= 0 ){
 						currentNode.children.add(childInd, (short) childLevelInd);
 						levels.get(i+1).get(childLevelInd).parents.add( (short) 0, (short) lastInd);
 						currentNode.turns.add( childInd, (byte) numTurns );
 					}else{
-						childLevelInd = -1*childLevelInd;
+						childLevelInd = (-1*childLevelInd) - 1;
 						NolanNode<Short> tempChild = new NolanNode<Short>();
 						tempChild.data = lastSeq[i+1];
 						tempChild.parents.add((short) lastInd);
@@ -649,54 +654,79 @@ public class CaptainNolan implements Captain {
 		public int[] toPlacement(int shipMod, int ind){
 			int[] ret = new int[3];
 			//if greter than half max, horizontal
-			int halfMax = ( 10 * ( 11 - shipLength[shipMod] ) );
-			if( ind > halfMax ){
+			int cycle = ( 11 - shipLength[shipMod] );
+			int halfMax = ( 10 * cycle );
+			if( ind >= halfMax ){
 				ind = ind - halfMax;
 				ret[2] = 0; 
-				ret[1] = ind % 10;
-				ret[0] = ind / 10;
+				ret[1] = ind % cycle;
+				ret[0] = ind / cycle;
 				
 			}else{
 				ret[2] = 1;
-				ret[0] = ind % 10;
-				ret[1] = ind / 10;
+				ret[0] = ind % cycle;
+				ret[1] = ind / cycle;
 				
 			}
 			return ret;
 		}
 		//creates index from placement
+		//need to fix this TODO
 		public short toIndex(int shipMod, int x, int y, int direc){
 			short ret = 0;
+			int cycle = ( 11 - shipLength[shipMod] );
 			if( direc == 0){
-				ret += ( 10 * ( 11 - shipLength[shipMod] ) );
+				ret += ( 10 * cycle );
 				ret += y;
-				ret += 10*x;
+				ret += cycle*x;
 			}else{
 				ret += x;
-				ret += 10*y;
+				ret += cycle*y;
 			}
 			
 			return ret;
 		}
 		//gets a fleet with the given ship and index
-		public Fleet getFleet(int shipMod, int ind){
-			int
-		}
+		//public Fleet getFleet(int shipMod, int ind){
+			//int
+		//}
 		//gets a random non-used fleet; 
 		public Fleet getFleet(){
-			//try to grab 3 random paths
+			Fleet ret = new Fleet();
+			short[] seq = new short[5];
+			boolean ready = false;
 			
-			//if none, make a new unused
-			//int maxVal = ( 20 * ( 11 - shipLength[shipMod] ) );
+			while( !ready ){
+				ret = new Fleet();
+				for( int i = 0; i < 5; i++){
+					int maxVal = ( 20 * ( 11 - shipLength[i] ) );
+					int seed = rGen.nextInt( maxVal );
+					int[] ship = toPlacement( i, seed );
+					while(!ret.placeShip( ship[0], ship[1], ship[2], i )){
+						seed = rGen.nextInt( maxVal );
+						ship = toPlacement( i, seed );
+					}
+					seq[i] = (short) seed;					
+				}
+				int det = wasUsed(seq);
+				if( det >= 0 && det < 135 ){
+					ready = true;
+				}
+			}
+			
+			this.lastSeq = seq;
+			return ret;
+			
 		}
 		public List<NolanNode> indToNode(List<Short> inds, List<NolanNode<Short>> items){
 			List<NolanNode> ret = new ArrayList<NolanNode>();
+			//System.out.println(inds.toString());
 			for( Short ind: inds){
 				ret.add(items.get(ind));
 			}
 			return ret;					
 		}
-		//return 0 if it was used, else the average of associated turn numbers
+		//return -1 if it was used, else the average of associated turn numbers
 		public int wasUsed(short[] seq){
 			
 			int total = 0;
@@ -727,18 +757,22 @@ public class CaptainNolan implements Captain {
 			}
 			
 			if(links == 4 ){
-				return 0;
+				return -1;
 			}
 			
-			return ( total / links );
+			if(links > 0){
+				return ( total / links );
+			}
+			return 0;
+			
 		}
 		
 	}
 	private static class NolanNode<Short> implements Comparable<Short>{
 		private Short data;
-        private List<Byte> turns;
-        private List<Short> children;
-        private List<Short> parents;
+        private List<Byte> turns = new ArrayList<Byte>();
+        private List<Short> children = new ArrayList<Short>();;
+        private List<Short> parents = new ArrayList<Short>();;
 		@Override
 		public int compareTo(Short arg) {
 			if ( (short) data < (short)arg ){
