@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 public class CaptainNolan implements Captain {
@@ -575,6 +576,179 @@ public class CaptainNolan implements Captain {
         }
     }
 	
+	/***********************************************************************
+	 * 
+	 * A tree object that keeps track of sequences of indexes stored as shorts.
+	 * The tree will grow and link nodes together as they are used in a placement.
+	 * It also keep track of the last number of turns that link ended in.
+	 * 
+	 * @author John
+	 *
+	 **********************************************************************/
+	private class NolanTree{
+		
+		private ArrayList<List<NolanNode<Short>>> levels;
+		
+		public NolanTree(){
+			//create levels to store ship config ind's
+			levels = new ArrayList<List<NolanNode<Short>>>();
+			for(int i = 0; i < 5; i++){
+				levels.add(new ArrayList<NolanNode<Short>>());
+			}
+			//create all ship configurations
+			
+			
+		}
+		
+		public void place( short[] lastSeq, int numTurns){
+			
+			int ind = Arrays.binarySearch(levels.get(0).toArray(), lastSeq[0]);
+			
+			if( ind < 0){
+				NolanNode<Short> temp = new NolanNode<Short>();
+				temp.data = lastSeq[0];
+				levels.get(0).add( -1 * ind, temp);
+			}
+			
+			int lastInd = ind;
+			
+			for( int i = 0; i < 4; i++){
+				
+				//add nodes to levels and then to parent nodes.
+							
+				NolanNode<Short> currentNode = levels.get(i).get(lastInd);
+				
+				int childInd = Arrays.binarySearch(indToNode(currentNode.children, levels.get(i) ).toArray(), lastSeq[i+1]);
+				if( childInd > 0){
+					currentNode.turns.set(childInd, (byte) numTurns);
+				}
+				else{
+					childInd = (-1*childInd);
+					int childLevelInd = Arrays.binarySearch(levels.get(i+1).toArray(), lastSeq[i+1]);
+					if( childLevelInd > 0 ){
+						currentNode.children.add(childInd, (short) childLevelInd);
+						levels.get(i+1).get(childLevelInd).parents.add( (short) 0, (short) lastInd);
+						currentNode.turns.add( childInd, (byte) numTurns );
+					}else{
+						childLevelInd = -1*childLevelInd;
+						NolanNode<Short> tempChild = new NolanNode<Short>();
+						tempChild.data = lastSeq[i+1];
+						tempChild.parents.add((short) lastInd);
+						levels.get(i+1).add( childLevelInd, tempChild);
+						currentNode.turns.add( childInd, (byte) numTurns );
+						currentNode.children.add( childInd, (short) childLevelInd );
+					}
+				}
+					
+				lastInd = childInd;			
+			}
+		}
+		//creates a placement from a given integer which has a max of the max number if uniq placements pre that shiptype
+		//start at 0,0 verticle going by x, then y
+		//proceed from 0,0 horizonal going y then x
+		public int[] toPlacement(int shipMod, int ind){
+			int[] ret = new int[3];
+			//if greter than half max, horizontal
+			int halfMax = ( 10 * ( 11 - shipLength[shipMod] ) );
+			if( ind > halfMax ){
+				ind = ind - halfMax;
+				ret[2] = 0; 
+				ret[1] = ind % 10;
+				ret[0] = ind / 10;
+				
+			}else{
+				ret[2] = 1;
+				ret[0] = ind % 10;
+				ret[1] = ind / 10;
+				
+			}
+			return ret;
+		}
+		//creates index from placement
+		public short toIndex(int shipMod, int x, int y, int direc){
+			short ret = 0;
+			if( direc == 0){
+				ret += ( 10 * ( 11 - shipLength[shipMod] ) );
+				ret += y;
+				ret += 10*x;
+			}else{
+				ret += x;
+				ret += 10*y;
+			}
+			
+			return ret;
+		}
+		//gets a fleet with the given ship and index
+		public Fleet getFleet(int shipMod, int ind){
+			int
+		}
+		//gets a random non-used fleet; 
+		public Fleet getFleet(){
+			//try to grab 3 random paths
+			
+			//if none, make a new unused
+			//int maxVal = ( 20 * ( 11 - shipLength[shipMod] ) );
+		}
+		public List<NolanNode> indToNode(List<Short> inds, List<NolanNode<Short>> items){
+			List<NolanNode> ret = new ArrayList<NolanNode>();
+			for( Short ind: inds){
+				ret.add(items.get(ind));
+			}
+			return ret;					
+		}
+		//return 0 if it was used, else the average of associated turn numbers
+		public int wasUsed(short[] seq){
+			
+			int total = 0;
+			int links = 0;
+			int lastInd = -1;			
+			
+			for( int i = 0; i < 4; i++){
+				int ind;
+				if( lastInd == -1){
+					 ind = Arrays.binarySearch(levels.get(i).toArray(), seq[i]);
+				}else{
+					ind = lastInd;
+				}
+				if( ind < 0){
+					lastInd = -1;
+					continue;
+				}
+				int childInd = Arrays.binarySearch(indToNode(levels.get(i).get(ind).children, levels.get(i+1) ).toArray(), seq[i]);
+				if( childInd < 0){
+					lastInd = -1;
+					continue;
+				}
+				else{
+					lastInd = childInd;
+					links++;
+					total += levels.get(i).get(ind).turns.get(childInd);
+				}
+			}
+			
+			if(links == 4 ){
+				return 0;
+			}
+			
+			return ( total / links );
+		}
+		
+	}
+	private static class NolanNode<Short> implements Comparable<Short>{
+		private Short data;
+        private List<Byte> turns;
+        private List<Short> children;
+        private List<Short> parents;
+		@Override
+		public int compareTo(Short arg) {
+			if ( (short) data < (short)arg ){
+				return -1;
+			}else if( (short) data < (short)arg ){
+				return 1;
+			}
+			return 0;
+		}
+	}
 	private abstract class NolanAttackType{
 		
 		public boolean				started;
