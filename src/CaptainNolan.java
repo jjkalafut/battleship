@@ -596,4 +596,20 @@ public class CaptainNolan implements Captain {
 		public abstract double[][][] getHeat();
 		
 	}
+	
+	private ArrayList<ArrayList<int[]>> getOptions(){
+		ArrayList<ArrayList<int[]>> ret = new ArrayList<ArrayList<int[]>>();
+		for(int i = 0; i < 5; i++){
+			ArrayList<int[]> temp = new ArrayList<int[]>();
+			for( int j = 0; j < 10; j++){
+				for( int k = 0; k < 11-shipLength[i]; k++){
+					temp.add( new int[]{1, j, k} );
+					temp.add( new int[]{0, k, j} );					
+				}
+			}
+			ret.add(temp);
+		}
+		
+		return ret;
+	}
 }
