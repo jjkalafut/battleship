@@ -631,8 +631,12 @@ public class CommanderShepard implements Captain {
 				int seed = rGen.nextInt(10);
 				switch (seed){
 				//case 1: randomPlace(i); break;
-				case 2: secondPlace(i); break;
-				default: randomPlace(i); //disPlace(i); break;
+				//case 2: secondPlace(i); break;
+				case 1:
+				case 2:
+				case 3:
+				case 4: randomPlace(i); break;
+				default: disPlace(i); break;
 				}
 			}	
 			

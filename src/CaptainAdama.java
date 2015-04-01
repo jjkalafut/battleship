@@ -26,7 +26,7 @@ public class CaptainAdama implements Captain {
     private ArrayList<shipCoord> allCoords;
     private ArrayList<shipCoord> attackVector;
     private ArrayList<shipCoord> hunterSeeker;
-    String opponent = "";
+    String opponent = ""; 
     Coordinate[] ptSpots, subSpots, destroyerSpots, battleShipSpots, airCraftSpots;
     Coordinate[][] totalSpots;
     trackCoords[][] board;

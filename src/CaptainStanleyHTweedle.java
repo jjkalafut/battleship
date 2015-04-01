@@ -20,7 +20,7 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
     int[] numShips;
     boolean[] hitShips;
     boolean readQueue;
-    String currentOpponent;
+    String currentOpponent; 
 
     CaptainStanleyHTweedle() {
         generator = new Random();
