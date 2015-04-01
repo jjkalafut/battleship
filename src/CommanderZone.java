@@ -3,7 +3,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-public class CaptainNolan implements Captain {
+public class CommanderZone implements Captain {
 
 	protected final int[] 						shipLength = {2,3,3,4,5};
     protected Fleet 							myFleet;
@@ -13,24 +13,26 @@ public class CaptainNolan implements Captain {
     private String 								lastOpponent = "";
     private Coordinate 							lastShot;
     private ArrayList<ArrayList<Coordinate>> 	hitShips;
-    private ArrayList<ArrayList<NolanPlacement>> 	theirPlacements;
-    private int[]								accuracy; //0 is hits 1 is shots
+    private ArrayList<ArrayList<ZonePlacement>> 	theirPlacements;
     private double[][][]						lastTen;
     private double[][]							lastTenVal;
     private int[]								lastTenIdx;
+    private int[][]								hitTheirShips;
     private boolean 							wasWin;
     private int 								turnNum;
-    private ArrayList<NolanAttackType>			attackMethods;
+    private ArrayList<ZoneAttackType>			attackMethods;
     private Random								rGen;
     private int									match_num;
     private int[]								atk_used;
-    private NolanTree							treeOfLife;
+    private ZoneDist							redPlace;
+    private ArrayList<ZoneZone>					zones;
+    private int									reZone;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
 
     	this.rGen = new Random();
-        this.theirPlacements = new ArrayList<ArrayList<NolanPlacement>>();
+        this.theirPlacements = new ArrayList<ArrayList<ZonePlacement>>();
         this.myFleet = new Fleet();
         this.shipsAlive = new boolean[]{true, true, true, true, true};
         this.myMatchShots = new boolean[10][10];
@@ -81,40 +83,123 @@ public class CaptainNolan implements Captain {
         		System.out.println( "Attack "+i+" used "+( atk_used[i]* 100 / total )+"% of the time.");
         	}
         }
-        
+        redPlace.refresh();
         boolean placed = false;
         if( this.wasWin){
         	for(int q = 0; q < 5; q++){
         		if(!shipWasHit[q]){
-        			this.myFleet = treeOfLife.getFleet(q, treeOfLife.lastSeq[q]);
+        			redPlace.getFleet(q, redPlace.lastInd[q]);
         			placed = true;
         			break;
         		}
         	}
         }
         if(!placed){
-        	this.myFleet = treeOfLife.getFleet();
+        	redPlace.getFleet();
         }
         
+        if(this.match_num == reZone){
+            reZone();
+        }
         shipWasHit = new boolean[]{ false, false, false, false, false};
     }
     
-    private Fleet randomFleet(){
-    	Fleet ret = new Fleet();
-    	for( int i = 0; i < 5; i++){
-    		while(!ret.placeShip(rGen.nextInt(10), rGen.nextInt(10), rGen.nextInt(2), i)){}
+    private void reZone(){
+    	boolean[][] isZoned = new boolean[10][10];
+    	int numZones = 6;
+    	this.zones = new ArrayList<ZoneZone>();    	
+    	Coordinate seed = new Coordinate(0,0);
+    	
+    	for( int i = 0; i < numZones; i++){
+
+    		double buffer = 1 + .03*(numZones - i);
+        	int tolerance = 40;
+    		int best = 0;
+    		for( int j = 0; j < 100; j++ ){
+    			int x = j % 10;
+    			int y = j / 10;
+    			if( !isZoned[x][y] && hitTheirShips[x][y] > best ){
+    				best = hitTheirShips[x][y];
+    				seed = new Coordinate(x,y);
+    			}
+    		}
+    		
+    		ArrayList<Coordinate> maybe = new ArrayList<Coordinate>();
+    		ZoneZone z = new ZoneZone();
+    		z.coords.add(seed);
+    		maybe.add(seed);
+    		for(int k = 0; k < maybe.size(); k++){
+    			ArrayList<Coordinate> temp = getAdj(maybe.get(k), isZoned);
+    			if( temp.size() == 0){
+    				maybe.remove(k);
+    				k--;
+    				continue;
+    			}
+    			for(Coordinate pos: temp){
+    				if( ( hitTheirShips[maybe.get(k).getX()][maybe.get(k).getY()] - hitTheirShips[pos.getX()][pos.getY()] ) < tolerance ){
+    					maybe.add( pos );
+    					z.coords.add( pos );
+    					isZoned[pos.getX()][pos.getY()] = true;
+    					//buffer +=.05;
+    				}else{
+    					//System.out.println("tolerance was "+tolerance);
+    					//System.out.println("difference was "+(hitTheirShips[maybe.get(k).getX()][maybe.get(k).getY()] - hitTheirShips[pos.getX()][pos.getY()]) );
+    				}
+    			}
+    			tolerance -= 6;
+    		}    
+    		z.buffer = buffer;
+    		System.out.println("Added new zone with "+z.coords.size()+" coords");
+    		this.zones.add(z);
+    	}    	
+    	
+    	//printArray(this.hitTheirShips);
+    	this.hitTheirShips = new int[10][10];
+    	this.reZone += 500;
+    }
+    private void printArray(int[][] array) {
+		for( int i = 0; i < 10; i++){
+			for( int j = 0; j < 10; j++){
+				System.out.print(array[j][i]+", ");
+			}
+			System.out.println();		
+		}		
+	}
+
+	private ArrayList<Coordinate> getAdj(Coordinate c, boolean[][] zoned){
+    	ArrayList<Coordinate> ret = new ArrayList<Coordinate>();
+    	int x = c.getX();
+    	int y = c.getY();
+    	if( c.getX() < 9){
+    		if(!zoned[x+1][y]){
+    			ret.add(new Coordinate(x+1,y  ));
+    		}
+    	}
+    	if( c.getX() > 0){
+    		if(!zoned[x-1][y]){
+    			ret.add(new Coordinate(x-1,y  ));
+    		}
+    	}
+    	if( c.getY() < 9){
+    		if(!zoned[x][y+1]){
+    			ret.add(new Coordinate(x,y+1  ));
+    		}
+    	}
+    	if( c.getY() < 0){
+    		if(!zoned[x][y-1]){
+    			ret.add(new Coordinate(x,y-1  ));
+    		}
     	}
     	return ret;
     }
-    
-    private void createPlacements(double[][][] scorer, ArrayList<ArrayList<NolanPlacement>> list) {
+    private void createPlacements(double[][][] scorer, ArrayList<ArrayList<ZonePlacement>> list) {
         for (int s = 0; s < 5; s++) {
             int shipLen = this.shipLength[s];
-            ArrayList<NolanPlacement> places = new ArrayList<NolanPlacement>();
+            ArrayList<ZonePlacement> places = new ArrayList<ZonePlacement>();
             for (int i = 0; i < 11 - shipLen; i++) {
                 for (int j = 0; j < 10; j++) {
-                	NolanPlacement p = new NolanPlacement(0, s, new Coordinate(i, j));
-                	NolanPlacement p2 = new NolanPlacement(1, s, new Coordinate(j, i));
+                	ZonePlacement p = new ZonePlacement(0, s, new Coordinate(i, j));
+                	ZonePlacement p2 = new ZonePlacement(1, s, new Coordinate(j, i));
                 	
                     double score = 0;
                     double score2 = 0;
@@ -143,17 +228,20 @@ public class CaptainNolan implements Captain {
        	 * 
        	 -----------------------------------------------------------------*/
     	this.turnNum = 50;
-        this.treeOfLife = new NolanTree();
+        this.redPlace = new ZoneDist();
         this.wasWin = false;
         this.lastOpponent = opponent;
+        this.reZone = 1000;
+        this.hitTheirShips = new int[10][10];
+        this.zones = new ArrayList<ZoneZone>();
         /*---------------------Attack Patterns-----------
          * 
          */
-        this.attackMethods = new ArrayList<NolanAttackType>();
+        this.attackMethods = new ArrayList<ZoneAttackType>();
         /*---------------------Attack Pattern 1-----------
          * standard shots/misses
          */
-        this.attackMethods.add(new NolanAttackType(){
+        this.attackMethods.add(new ZoneAttackType(){
 
         	/* int 0 hits, int 1 shots, double 1 heat */
 			@Override
@@ -206,12 +294,13 @@ public class CaptainNolan implements Captain {
 			}
 			
         });
+        
         /*---------------------Attack Pattern 2-----------
          * last 100 hits
-         */
-        this.attackMethods.add(new NolanAttackType(){
+         
+        this.attackMethods.add(new ZoneAttackType(){
 
-        	/* int 0 hits, int 1 shots, double 1 heat */
+        	// int 0 hits, int 1 shots, double 1 heat 
         	private Coordinate[] oldShots = new Coordinate[100];
         	private boolean[]oldHit = new boolean[100];
         	private int[] shipHitMod = new int[100];
@@ -282,10 +371,11 @@ public class CaptainNolan implements Captain {
 			
         	
         });
+        */
         /*---------------------Attack Pattern 3-----------
          * least shot i think
          */
-        this.attackMethods.add(new NolanAttackType(){
+        this.attackMethods.add(new ZoneAttackType(){
 
         	/* int 0 hits, int 1 shots, double 1 heat */
 			@Override
@@ -340,10 +430,10 @@ public class CaptainNolan implements Captain {
         });
         /*---------------------Attack Pattern 4-----------
          * what do...
-         */
-        this.attackMethods.add(new NolanAttackType(){
+         
+        this.attackMethods.add(new ZoneAttackType(){
 
-        	/* int 0 washits, int 1 nowhit, int 2 heading */
+        	// int 0 washits, int 1 nowhit, int 2 heading 
 			@Override
 			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
 				
@@ -377,19 +467,18 @@ public class CaptainNolan implements Captain {
 			}
 			
         });
-        
+        */
         this.lastTen = new double[10][attackMethods.size()][5];
         this.lastTenVal = new double[attackMethods.size()][5];
         this.atk_used = new int[attackMethods.size()];
         this.lastTenIdx = new int[5];
-    	this.accuracy = new int[attackMethods.size()];
         /*
          *Init attack patterns 
          */            
         this.attackMethods.get(0).init(1, 2);
-        this.attackMethods.get(1).init(1, 2);
-        this.attackMethods.get(2).init(1, 1);
-        this.attackMethods.get(3).init(0, 0);
+        //this.attackMethods.get(1).init(1, 2);
+        this.attackMethods.get(1).init(1, 1);
+        //this.attackMethods.get(3).init(0, 0);
         this.match_num = 0;
     }
 
@@ -406,13 +495,18 @@ public class CaptainNolan implements Captain {
         double[][] turnHeat = new double[10][10];
         for (int s = 4; s >= 0; s--) {
             if (this.shipsAlive[s]) {
-                ArrayList<NolanPlacement> places = this.theirPlacements.get(s);
-                for (NolanPlacement p : places) {
+                ArrayList<ZonePlacement> places = this.theirPlacements.get(s);
+                for (ZonePlacement p : places) {
                     for (Coordinate c : p.coords) {
                         turnHeat[c.getX()][c.getY()] += p.score;
                     }
                 }
             }
+        }
+        for( ZoneZone z : this.zones ){
+        	for( Coordinate c : z.coords){
+        		turnHeat[c.getX()][c.getY()] *= z.buffer;
+        	}
         }
         int x = 0;
         int y = 0;
@@ -436,14 +530,14 @@ public class CaptainNolan implements Captain {
     	int shipMod = result % 10;
         if (result == MISS || result == DEFEATED) {
         	
-        	for( NolanAttackType pat : this.attackMethods){
+        	for( ZoneAttackType pat : this.attackMethods){
             	pat.shotHere( false, 0, this.lastShot );
             }
             for (int s = 0; s < 5; s++) {
                 if (this.shipsAlive[s]) {
-                    ArrayList<NolanPlacement> places = this.theirPlacements.get(s);
-                    ArrayList<NolanPlacement> bads = new ArrayList<NolanPlacement>();
-                    for (NolanPlacement p : places) {
+                    ArrayList<ZonePlacement> places = this.theirPlacements.get(s);
+                    ArrayList<ZonePlacement> bads = new ArrayList<ZonePlacement>();
+                    for (ZonePlacement p : places) {
                         if (p.contains(this.lastShot)) {
                             bads.add(p);
                         }
@@ -452,9 +546,8 @@ public class CaptainNolan implements Captain {
                 }
             }
         } else {
-        	this.accuracy[0]++;
         	
-        	for( NolanAttackType pat : this.attackMethods){
+        	for( ZoneAttackType pat : this.attackMethods){
             	double val = pat.getHeat()[this.lastShot.getX()][this.lastShot.getY()][shipMod];
             	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] -= this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod];
             	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] += val;
@@ -462,7 +555,7 @@ public class CaptainNolan implements Captain {
             	pat.shotHere( true, shipMod, this.lastShot );
             }
         	this.lastTenIdx[shipMod] = (this.lastTenIdx[shipMod] + 1) % 10;
-
+        	this.hitTheirShips[lastShot.getX()][lastShot.getY()] ++;
             if (result >= 20) {
 
                 this.shipsAlive[shipMod] = false;
@@ -492,18 +585,18 @@ public class CaptainNolan implements Captain {
             }
             for (int s = 0; s < 5; s++) {
                 if (this.shipsAlive[s] && s != shipMod) {
-                    ArrayList<NolanPlacement> places = this.theirPlacements.get(s);
-                    ArrayList<NolanPlacement> bads = new ArrayList<NolanPlacement>();
-                    for (NolanPlacement p : places) {
+                    ArrayList<ZonePlacement> places = this.theirPlacements.get(s);
+                    ArrayList<ZonePlacement> bads = new ArrayList<ZonePlacement>();
+                    for (ZonePlacement p : places) {
                         if (p.contains(this.lastShot)) {
                             bads.add(p);
                         }
                     }
                     places.removeAll(bads);
                 } else if (this.shipsAlive[s] && s == shipMod) {
-                    ArrayList<NolanPlacement> places = this.theirPlacements.get(s);
-                    ArrayList<NolanPlacement> bads = new ArrayList<NolanPlacement>();
-                    for (NolanPlacement p : places) {
+                    ArrayList<ZonePlacement> places = this.theirPlacements.get(s);
+                    ArrayList<ZonePlacement> bads = new ArrayList<ZonePlacement>();
+                    for (ZonePlacement p : places) {
                         if (!p.contains(this.lastShot)) {
                             bads.add(p);
                         }
@@ -511,7 +604,6 @@ public class CaptainNolan implements Captain {
                     places.removeAll(bads);
                 }
             }
-
         }
     }
 
@@ -525,17 +617,16 @@ public class CaptainNolan implements Captain {
     @Override
     public void resultOfGame(int result) {
         this.wasWin = ( result == WON );
-        this.treeOfLife.place( this.turnNum );
     }
 	
-	private class NolanPlacement {
+	private class ZonePlacement {
 
         public Coordinate[] coords;
         public double score = 0;
         public int[] shipLength = {2, 3, 3, 4, 5};
         public int direc;
 
-        NolanPlacement(int direc, int type, Coordinate loc) {
+        ZonePlacement(int direc, int type, Coordinate loc) {
             this.direc = direc;
             coords = new Coordinate[shipLength[type]];
             coords[0] = loc;
@@ -586,226 +677,210 @@ public class CaptainNolan implements Captain {
 	 * @author John
 	 *
 	 **********************************************************************/
-	private class NolanTree{
+	private class ZoneDist{
 		
-		private ArrayList<List<NolanNode<Short>>> levels;
-		short[] lastSeq;
+		private ArrayList<ZonePlacement[]> placements;
+		private int[][][] shipNumbers;
+		int[] lastInd;
 		
-		public NolanTree(){
+		public ZoneDist(){
 			//create levels to store ship config ind's
-			levels = new ArrayList<List<NolanNode<Short>>>();
-			for(int i = 0; i < 5; i++){
-				levels.add(new ArrayList<NolanNode<Short>>());
-			}
-			//create all ship configurations
-			
-			
+			shipNumbers = new int[5][10][10];
+			lastInd = new int[5];
 		}
 		
-		public void place( int numTurns){
-			
-			int ind = Arrays.binarySearch(levels.get(0).toArray(), lastSeq[0]);
-			
-			if( ind < 0){
-				NolanNode<Short> temp = new NolanNode<Short>();
-				temp.data = lastSeq[0];
-				ind = (-1 * ind) - 1;
-				levels.get(0).add( ind, temp);
-			}
-			
-			int lastInd = ind;
-			
-			for( int i = 0; i < 4; i++){
-				
-				//add nodes to levels and then to parent nodes.
-							
-				NolanNode<Short> currentNode = levels.get(i).get(lastInd);
-				
-				int childInd = Arrays.binarySearch(indToNode(currentNode.children, levels.get(i+1) ).toArray(), lastSeq[i+1]);
-				if( childInd >= 0){
-					currentNode.turns.set(childInd, (byte) numTurns);
-				}
-				else{
-					childInd = (-1*childInd) - 1;
-					int childLevelInd = Arrays.binarySearch(levels.get(i+1).toArray(), lastSeq[i+1]);
-					if( childLevelInd >= 0 ){
-						currentNode.children.add(childInd, (short) childLevelInd);
-						levels.get(i+1).get(childLevelInd).parents.add( (short) 0, (short) lastInd);
-						currentNode.turns.add( childInd, (byte) numTurns );
-					}else{
-						childLevelInd = (-1*childLevelInd) - 1;
-						NolanNode<Short> tempChild = new NolanNode<Short>();
-						tempChild.data = lastSeq[i+1];
-						tempChild.parents.add((short) lastInd);
-						levels.get(i+1).add( childLevelInd, tempChild);
-						currentNode.turns.add( childInd, (byte) numTurns );
-						currentNode.children.add( childInd, (short) childLevelInd );
-					}
-				}
-					
-				lastInd = childInd;			
-			}
-		}
-		//creates a placement from a given integer which has a max of the max number if uniq placements pre that shiptype
-		//start at 0,0 verticle going by x, then y
-		//proceed from 0,0 horizonal going y then x
-		public int[] toPlacement(int shipMod, int ind){
-			int[] ret = {theirPlacements.get(shipMod).get(ind).coords[0].getX(), theirPlacements.get(shipMod).get(ind).coords[0].getY(), theirPlacements.get(shipMod).get(ind).direc};
-			return ret;
-		}
-		//creates index from placement
-		//need to fix this TODO
-		public short toIndex(int shipMod, int x, int y, int direc){
-			
-			
-			return 0;
-		}
 		//gets a fleet with the given ship and index
-		public Fleet getFleet(int shipMod, int ind){
-			int less = shipMod;
-			int more = shipMod;
-			short[] seq = new short[5];
-			Fleet ret = new Fleet();
-			boolean ready = false;
+		public void getFleet(int shipMod, int ind){
 			
-			while(!ready){
-				ret = new Fleet();
-				seq[shipMod] = (short) ind;
-				int[] given = toPlacement(shipMod, ind);
-				ret.placeShip(given[0], given[1], given[2], shipMod);
-				
-				for( int i = 0; i < less; i++ ){
-					int maxVal = ( 20 * ( 11 - shipLength[i] ) );
-					int seed = rGen.nextInt( maxVal );
-					int[] ship = toPlacement( i, seed );
-					while(!ret.placeShip( ship[0], ship[1], ship[2], i )){
-						//System.out.println(ship[0]+":"+ ship[1]+":"+ ship[2]+":"+ i);
-						seed = rGen.nextInt( maxVal );
-						ship = toPlacement( i, seed );
-					}
-					seq[i] = (short) seed;
-					
+			myFleet = new Fleet();
+			ZonePlacement sp = placements.get(shipMod)[ind];
+			myFleet.placeShip(sp.coords[0], sp.direc, shipMod);
+			
+			for( Coordinate c : sp.coords ){
+				shipNumbers[shipMod][c.getX()][c.getY()]++;
+			}
+			
+			for( int i = 0; i < 5; i++){
+				if( i == shipMod ){
+					continue;
 				}
-				for( int j = 4; j >  more; j--){
-					int maxVal = ( 20 * ( 11 - shipLength[j] ) );
-					int seed = rGen.nextInt( maxVal );
-					int[] ship = toPlacement( j, seed );
-					while(!ret.placeShip( ship[0], ship[1], ship[2], j )){
-						//System.out.println(ship[0]+":"+ ship[1]+":"+ ship[2]+":"+ i);
-						seed = rGen.nextInt( maxVal );
-						ship = toPlacement( j, seed );
-					}
-					seq[j] = (short) seed;
-				}
-				int det = wasUsed(seq);
-				if( det >= 0 && det < 135 ){
-					ready = true;
+				int seed = rGen.nextInt(10);
+				switch (seed){
+				//case 1: randomPlace(i); break;
+				//case 2: secondPlace(i); break;
+				default: disPlace(i); break;
 				}
 			}
-			this.lastSeq = seq;
-			return ret;
+			
+			if(!myFleet.isFleetReady()){
+				System.out.println("mod not ready");
+			}
 		}
 		//gets a random non-used fleet; 
-		public Fleet getFleet(){
-			Fleet ret = new Fleet();
-			short[] seq = new short[5];
-			boolean ready = false;
+		public void getFleet(){
+			myFleet = new Fleet();
 			
-			while( !ready ){
-				ret = new Fleet();
-				for( int i = 0; i < 5; i++){
-					int maxVal = ( 20 * ( 11 - shipLength[i] ) );
-					int seed = rGen.nextInt( maxVal );
-					int[] ship = toPlacement( i, seed );
-					while(!ret.placeShip( ship[0], ship[1], ship[2], i )){
-						//System.out.println(ship[0]+":"+ ship[1]+":"+ ship[2]+":"+ i);
-						seed = rGen.nextInt( maxVal );
-						ship = toPlacement( i, seed );
+			for( int i = 0; i < 5; i++){
+				int seed = rGen.nextInt(10);
+				switch (seed){
+				//case 1: randomPlace(i); break;
+				//case 2: secondPlace(i); break;
+				default: disPlace(i); break;
+				}
+			}	
+			
+			if(!myFleet.isFleetReady()){
+				System.out.println("reg not ready");
+			}
+		}
+		
+		public void randomPlace( int shipMod ){
+			int max = ( 20 * ( 11 - shipLength[shipMod] ) );
+			int ind = rGen.nextInt(max);
+			ZonePlacement sp = placements.get(shipMod)[ind];
+			
+			while(!myFleet.placeShip( sp.coords[0], sp.direc, shipMod) ){
+				ind = rGen.nextInt(max);
+				sp = placements.get(shipMod)[ind];
+			}
+			for( Coordinate c : placements.get(shipMod)[ind].coords ){
+				shipNumbers[shipMod][c.getX()][c.getY()]++;
+			}
+			lastInd[shipMod] = ind;
+		}
+		
+		public void secondPlace( int shipMod ){
+			int smallest = Integer.MAX_VALUE;
+			int ind = 0;
+			int secondPlaceInd = 0;
+			int placeInd = 0;
+			ZonePlacement best = placements.get(shipMod)[0];
+			ZonePlacement secondBest = placements.get(shipMod)[0];
+			for( ZonePlacement sp : placements.get(shipMod)){				
+				if( sp.score <= smallest ){
+					boolean ok = true;
+					for(Coordinate c: sp.coords){
+						for( Ship p: myFleet.fleet){
+							if( p != null && p.isOnShip(c)){
+								ok = false;
+								break;
+							}
+						}
 					}
-					seq[i] = (short) seed;					
+					if( ok ){
+						if( smallest == Integer.MAX_VALUE){
+							secondBest = sp;
+							smallest = (int) sp.score;
+							secondPlaceInd = ind;
+							placeInd = ind;
+							best = sp;
+						}
+						else{
+							secondBest = best;
+							smallest = (int) sp.score;
+							secondPlaceInd = placeInd;
+							placeInd = ind;
+							best = sp;
+						}
+					}
 				}
-				int det = wasUsed(seq);
-				if( det >= 0 && det < 135 ){
-					ready = true;
-				}
+				ind++;
 			}
-			
-			this.lastSeq = seq;
-			return ret;
-			
+			myFleet.placeShip( secondBest.coords[0], secondBest.direc, shipMod);
+			for( Coordinate c : secondBest.coords ){
+				shipNumbers[shipMod][c.getX()][c.getY()]++;
+			}
+			lastInd[shipMod] = secondPlaceInd;
 		}
-		public List<NolanNode> indToNode(List<Short> inds, List<NolanNode<Short>> items){
-			List<NolanNode> ret = new ArrayList<NolanNode>();
-			for( Short ind: inds){
-				ret.add(items.get(ind));
+
+		public void disPlace( int shipMod ){
+			int ind = 0;
+			int placeInd = 0;
+			int smallest = Integer.MAX_VALUE;
+			ZonePlacement best = new ZonePlacement(0, 0, new Coordinate(0, 0) );
+			for( ZonePlacement sp : placements.get(shipMod)){
+				if( sp.score < smallest ){
+					boolean ok = true;
+					for(Coordinate c: sp.coords){
+						for( Ship p: myFleet.fleet){
+							if( p != null && p.isOnShip(c)){
+								ok = false;
+								break;
+							}
+						}
+					}
+					if( ok ){
+						smallest = (int) sp.score;
+						best = sp;
+						placeInd = ind;
+					}
+				}
+				ind++;
 			}
-			return ret;					
+			myFleet.placeShip( best.coords[0], best.direc, shipMod);
+			for( Coordinate c : best.coords ){
+				shipNumbers[shipMod][c.getX()][c.getY()]++;
+			}
+			lastInd[shipMod] = placeInd;
+		}	
+		
+		public void refresh(){
+			placements = new ArrayList<ZonePlacement[]>();
+			for (int s = 0; s < 5; s++) {
+	            int shipLen = shipLength[s];
+	            ZonePlacement[] places = new ZonePlacement[( 20 * ( 11 - shipLen ) )];
+	            int ind = 0;
+	            for (int i = 0; i < 11 - shipLen; i++) {
+	                for (int j = 0; j < 10; j++) {
+	                	ZonePlacement p = new ZonePlacement(0, s, new Coordinate(i, j));
+	                	ZonePlacement p2 = new ZonePlacement(1, s, new Coordinate(j, i));
+	                	
+	                    double score = 0;
+	                    double score2 = 0;
+
+	                    for (int k = 0; k < shipLen; k++) {
+	                        score += shipNumbers[s][i + k][j];
+	                        score2 += shipNumbers[s][j][i + k];
+	                    }
+	                    p.score = score;
+	                    p2.score = score2;
+	                    
+	                    places[ind] = p;
+	                    ind++;
+	                    places[ind] = p2;
+	                    ind++;
+	                }
+	            }
+	            //System.out.println("Mod "+s+" ships: "+places.size());
+	            placements.add(places);
+	        }
 		}
-		//return -1 if it was used, else the average of associated turn numbers
-		public int wasUsed(short[] seq){
-			
-			int total = 0;
-			int links = 0;
-			int lastInd = -1;			
-			
-			for( int i = 0; i < 4; i++){
-				int ind;
-				if( lastInd == -1){
-					 ind = Arrays.binarySearch(levels.get(i).toArray(), seq[i]);
-				}else{
-					ind = lastInd;
-				}
-				if( ind < 0){
-					lastInd = -1;
-					continue;
-				}
-				int childInd = Arrays.binarySearch(indToNode(levels.get(i).get(ind).children, levels.get(i+1) ).toArray(), seq[i]);
-				if( childInd < 0){
-					lastInd = -1;
-					continue;
-				}
-				else{
-					lastInd = childInd;
-					links++;
-					total += levels.get(i).get(ind).turns.get(childInd);
-				}
-			}
-			
-			if(links == 4 ){
-				return -1;
-			}
-			
-			if(links > 0){
-				return ( total / links );
-			}
-			return 0;
-			
+	}
+	
+	private class ZoneZone{
+		public ArrayList<Coordinate> 		coords;
+		public double 						buffer;
+		
+		public ZoneZone(){
+			coords = new ArrayList<Coordinate>();
+			buffer = 0;
+		}
+		public void addCoord(int x, int y){
+			coords.add(new Coordinate(x,y));
+		}
+		public void addCoord( Coordinate c ){
+			coords.add(c);
 		}
 		
 	}
-	private static class NolanNode<Short> implements Comparable<Short>{
-		private Short data;
-        private List<Byte> turns = new ArrayList<Byte>();
-        private List<Short> children = new ArrayList<Short>();;
-        private List<Short> parents = new ArrayList<Short>();;
-		@Override
-		public int compareTo(Short arg) {
-			if ( (short) data < (short)arg ){
-				return -1;
-			}else if( (short) data < (short)arg ){
-				return 1;
-			}
-			return 0;
-		}
-	}
-	private abstract class NolanAttackType{
+	private abstract class ZoneAttackType{
 		
 		public boolean				started;
 		public double 				accuracy;
 		public double[][][][] 		shipDoubleArrays;
 		public int[][][][] 			shipIntArrays;
 		
-		public NolanAttackType(){
+		public ZoneAttackType(){
 			
 		}
 

@@ -90,7 +90,7 @@ public class Fleet implements Constants {
      */
     public boolean isShipAt(Coordinate coord) {
         for (Ship s : fleet) {
-            if (s.isOnShip(coord)) {
+            if ( s.isOnShip(coord)) {
                 return true;
             }
         }
