@@ -12,7 +12,6 @@ public class CommanderZone implements Captain {
     private boolean[]							shipWasHit;
     private String 								lastOpponent = "";
     private Coordinate 							lastShot;
-    private ArrayList<ArrayList<Coordinate>> 	hitShips;
     private ArrayList<ArrayList<ZonePlacement>> 	theirPlacements;
     private double[][][]						lastTen;
     private double[][]							lastTenVal;
@@ -36,8 +35,6 @@ public class CommanderZone implements Captain {
         this.myFleet = new Fleet();
         this.shipsAlive = new boolean[]{true, true, true, true, true};
         this.myMatchShots = new boolean[10][10];
-        this.hitShips = new ArrayList<ArrayList<Coordinate>>();
-
 
         for (int i = 0; i < 10; i++) {
             Arrays.fill(this.myMatchShots[i], false);
@@ -556,33 +553,6 @@ public class CommanderZone implements Captain {
             }
         	this.lastTenIdx[shipMod] = (this.lastTenIdx[shipMod] + 1) % 10;
         	this.hitTheirShips[lastShot.getX()][lastShot.getY()] ++;
-            if (result >= 20) {
-
-                this.shipsAlive[shipMod] = false;
-                ArrayList<Coordinate> bad_ship = new ArrayList<Coordinate>();
-                for (ArrayList<Coordinate> ship : this.hitShips) {
-                    if (ship.get(0).getX() == shipMod) {
-                        bad_ship = ship;
-                        break;
-                    }
-                }
-                this.hitShips.remove(bad_ship);
-            } else {
-                boolean hitBefore = false;
-                for (ArrayList<Coordinate> ship : this.hitShips) {
-                    if (ship.get(0).getX() == shipMod) {
-                        hitBefore = true;
-                        //ship.add(this.lastShot);
-                        break;
-                    }
-                }
-                if (!hitBefore) {
-                    ArrayList<Coordinate> newShip = new ArrayList<Coordinate>();
-                    newShip.add(new Coordinate(shipMod, 0));
-                    newShip.add(this.lastShot);
-                    this.hitShips.add(newShip);
-                }
-            }
             for (int s = 0; s < 5; s++) {
                 if (this.shipsAlive[s] && s != shipMod) {
                     ArrayList<ZonePlacement> places = this.theirPlacements.get(s);
