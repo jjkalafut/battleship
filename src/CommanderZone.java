@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 public class CommanderZone implements Captain {
@@ -99,22 +98,17 @@ public class CommanderZone implements Captain {
         	}
         }
         redPlace.refresh();
-        boolean placed = false;
         if( this.wasWin){
-        	for(int q = 0; q < 5; q++){
-        		if(!shipWasHit[q]){
-        			redPlace.getFleet(q, redPlace.lastInd[q]);
-        			placed = true;
-        			break;
-        		}
-        	}
+        	this.redPlace.getFleet(this.shipWasHit);
         }
-        if(!placed){
+        else{
         	redPlace.getFleet();
         }
+        redPlace.remakeFleets();
         shipWasHit = new boolean[]{ false, false, false, false, false};
     }
     private void checkShots() {
+    	//TODO
 		this.firstShots.add(new Coordinate(0,0));
 		this.firstShots.add(new Coordinate(9,9));
 		this.firstShots.add(new Coordinate(0,9));
@@ -530,7 +524,9 @@ public class CommanderZone implements Captain {
     public Coordinate makeAttack() {
         this.turnNum++;
         Coordinate shot = new Coordinate(0, 0);
-        
+        this.lastShot = shot;
+        return shot;
+        /*
         if( this.randShots > 0 ){
         	this.randShots--;
         	int ind = rGen.nextInt(this.firstShots.size());
@@ -567,10 +563,12 @@ public class CommanderZone implements Captain {
         this.lastShot = shot;
         this.myMatchShots[shot.getX()][shot.getY()] = true;
         return shot;
+        */
     }
 
     @Override
     public void resultOfAttack(int result) {
+    	/*
     	int shipMod = result % 10;
         if (result == MISS || result == DEFEATED) {
         	
@@ -622,6 +620,7 @@ public class CommanderZone implements Captain {
                 }
             }
         }
+        */
     }
 
     @Override
@@ -629,6 +628,7 @@ public class CommanderZone implements Captain {
     	if( myFleet.getLastAttackValue() != MISS ){
     		shipWasHit[ myFleet.getLastAttackValue() % 10 ] = true;
     	}
+    	this.redPlace.shotAt(coord);
     }
 
     @Override
@@ -699,74 +699,137 @@ public class CommanderZone implements Captain {
 		private ArrayList<ZonePlacement[]> placements;
 		private int[][][] shipNumbers;
 		int[] lastInd;
+		private int[][] shipInd;
+		private int[][] turnsToHit;
+		private Fleet[] fleets;
+		private Fleet gameFleet;
+		private int numFleets = 3;
+		private int turnNum;
 		
 		public ZoneDist(){
 			//create levels to store ship config ind's
 			shipNumbers = new int[5][10][10];
 			lastInd = new int[5];
+			shipInd = new int[numFleets][5];
+			turnsToHit = new int[numFleets][5];
+			fleets = new Fleet[numFleets];
+			refresh();
+			remakeFleets();
+			turnNum = 0;
 		}
 		
-		//gets a fleet with the given ship and index
-		public void getFleet(int shipMod, int ind){
-			
-			myFleet = new Fleet();
-			ZonePlacement sp = placements.get(shipMod)[ind];
-			myFleet.placeShip(sp.coords[0], sp.direc, shipMod);
-			
-			for( Coordinate c : sp.coords ){
-				shipNumbers[shipMod][c.getX()][c.getY()]++;
+		public void shotAt(Coordinate c){
+			turnNum++;
+			for(int i = 0; i < numFleets; i++ ){
+				int atk = fleets[i].attacked(c);
+				if( atk != MISS && atk != DEFEATED){
+					int ship = atk % 10;
+					if( turnsToHit[i][ship] == 100){
+						turnsToHit[i][ship] = turnNum;
+					}
+				}
 			}
+		}
+		//gets a fleet with the given ship and index
+		public void getFleet(boolean[] wasHit){
+			
+			turnNum = 0;
+			gameFleet = new Fleet();
+			for( int k = 0; k < 5; k++){
+				if( !wasHit[k] ){
+					ZonePlacement sp = placements.get(k)[lastInd[k]];
+					gameFleet.placeShip(sp.coords[0], sp.direc, k);
+				}
+			}
+						
 			
 			for( int i = 0; i < 5; i++){
-				if( i == shipMod ){
-					continue;
-				}
-				int seed = rGen.nextInt(10);
-				switch (seed){
-				case 1: randomPlace(i); break;
-				case 2: secondPlace(i); break;
-				default: disPlace(i); break;
+				if( wasHit[i] ){				
+					int best = 0;
+					int ind = 0;
+					for( int j = 0; j < numFleets; j++){
+						if( turnsToHit[j][i] > best){
+							best = turnsToHit[j][i];
+							ind = j;
+						}
+					}
+					if(gameFleet.placeShip(placements.get(i)[shipInd[ind][i]].coords[0], placements.get(i)[shipInd[ind][i]].direc, i)){
+						lastInd[i] = shipInd[ind][i];
+					}else{
+						lastInd[i] = getShip(i, ind, gameFleet);
+					}
 				}
 			}
 			
-			if(!myFleet.isFleetReady()){
+			for( int k = 0; k < 5; k++){
+				for( Coordinate c: placements.get(k)[lastInd[k]].coords ){
+					shipNumbers[k][c.getX()][c.getY()]++;
+				}
+			}
+			
+			if(!gameFleet.isFleetReady()){
 				System.out.println("mod not ready");
 			}
+			myFleet = gameFleet;
 		}
 		//gets a random non-used fleet; 
 		public void getFleet(){
-			myFleet = new Fleet();
+			turnNum = 0;
+			gameFleet = new Fleet();
 			
 			for( int i = 0; i < 5; i++){
-				int seed = rGen.nextInt(10);
-				switch (seed){
-				case 1: randomPlace(i); break;
-				case 2: secondPlace(i); break;
-				default: disPlace(i); break;
+				int best = 0;
+				int ind = 0;
+				for( int j = 0; j < numFleets; j++){
+					if( turnsToHit[j][i] > best){
+						best = turnsToHit[j][i];
+						ind = j;
+					}
+				}
+				if(gameFleet.placeShip(placements.get(i)[shipInd[ind][i]].coords[0], placements.get(i)[shipInd[ind][i]].direc, i)){
+					lastInd[i] = shipInd[ind][i];
+				}else{
+					lastInd[i] = getShip(i, ind, gameFleet);
 				}
 			}	
 			
-			if(!myFleet.isFleetReady()){
+			for( int k = 0; k < 5; k++){
+				for( Coordinate c: placements.get(k)[lastInd[k]].coords ){
+					shipNumbers[k][c.getX()][c.getY()]++;
+				}
+			}
+			
+			if(!gameFleet.isFleetReady()){
 				System.out.println("reg not ready");
 			}
+			myFleet = gameFleet;
 		}
 		
-		public void randomPlace( int shipMod ){
+		public int getShip(int shipMod, int place, Fleet fl){
+			int ret = 0;
+			switch (place){
+			case 0: ret = randomPlace(shipMod, fl); break;
+			case 1: ret = disPlace(shipMod, fl); break;
+			case 2: ret = secondPlace(shipMod, fl); break;
+			default: ret = disPlace(shipMod, fl); break;
+			}
+			return ret;
+		}
+		
+		public int randomPlace( int shipMod, Fleet fl ){
 			int max = ( 20 * ( 11 - shipLength[shipMod] ) );
 			int ind = rGen.nextInt(max);
 			ZonePlacement sp = placements.get(shipMod)[ind];
 			
-			while(!myFleet.placeShip( sp.coords[0], sp.direc, shipMod) ){
+			while(!fl.placeShip( sp.coords[0], sp.direc, shipMod) ){
 				ind = rGen.nextInt(max);
 				sp = placements.get(shipMod)[ind];
 			}
-			for( Coordinate c : placements.get(shipMod)[ind].coords ){
-				shipNumbers[shipMod][c.getX()][c.getY()]++;
-			}
-			lastInd[shipMod] = ind;
+			
+			return ind;
 		}
 		
-		public void secondPlace( int shipMod ){
+		public int secondPlace( int shipMod, Fleet fl ){
 			int smallest = Integer.MAX_VALUE;
 			int ind = 0;
 			int secondPlaceInd = 0;
@@ -777,7 +840,7 @@ public class CommanderZone implements Captain {
 				if( sp.score <= smallest ){
 					boolean ok = true;
 					for(Coordinate c: sp.coords){
-						for( Ship p: myFleet.fleet){
+						for( Ship p: fl.fleet){
 							if( p != null && p.isOnShip(c)){
 								ok = false;
 								break;
@@ -803,14 +866,12 @@ public class CommanderZone implements Captain {
 				}
 				ind++;
 			}
-			myFleet.placeShip( secondBest.coords[0], secondBest.direc, shipMod);
-			for( Coordinate c : secondBest.coords ){
-				shipNumbers[shipMod][c.getX()][c.getY()]++;
-			}
-			lastInd[shipMod] = secondPlaceInd;
+			fl.placeShip( secondBest.coords[0], secondBest.direc, shipMod);
+			
+			return secondPlaceInd;
 		}
 
-		public void disPlace( int shipMod ){
+		public int disPlace( int shipMod, Fleet fl ){
 			int ind = 0;
 			int placeInd = 0;
 			int smallest = Integer.MAX_VALUE;
@@ -819,7 +880,7 @@ public class CommanderZone implements Captain {
 				if( sp.score < smallest ){
 					boolean ok = true;
 					for(Coordinate c: sp.coords){
-						for( Ship p: myFleet.fleet){
+						for( Ship p: fl.fleet){
 							if( p != null && p.isOnShip(c)){
 								ok = false;
 								break;
@@ -834,13 +895,21 @@ public class CommanderZone implements Captain {
 				}
 				ind++;
 			}
-			myFleet.placeShip( best.coords[0], best.direc, shipMod);
-			for( Coordinate c : best.coords ){
-				shipNumbers[shipMod][c.getX()][c.getY()]++;
-			}
-			lastInd[shipMod] = placeInd;
+			fl.placeShip( best.coords[0], best.direc, shipMod);
+			
+			return placeInd;
 		}	
 		
+		public void remakeFleets(){
+			//remake all fleets
+			for( int p = 0; p < numFleets; p++){
+				fleets[p] = new Fleet();
+				for(int q = 0; q < 5; q++){
+					shipInd[p][q] = getShip(q, p, fleets[p]);
+					turnsToHit[p][q] = 100;
+				}
+			}
+		}
 		public void refresh(){
 			placements = new ArrayList<ZonePlacement[]>();
 			for (int s = 0; s < 5; s++) {
