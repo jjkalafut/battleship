@@ -12,20 +12,21 @@ public class CommanderZone implements Captain {
     private boolean[]							shipWasHit;
     private String 								lastOpponent = "";
     private Coordinate 							lastShot;
-    private ArrayList<ArrayList<ZonePlacement>> 	theirPlacements;
+    private ArrayList<ArrayList<ZonePlacement>> theirPlacements;
     private double[][][]						lastTen;
     private double[][]							lastTenVal;
     private int[]								lastTenIdx;
     private int[][]								hitTheirShips;
+    private double[][][][]						atkHeats;
     private boolean 							wasWin;
     private int 								turnNum;
+    private ArrayList<Coordinate>				firstShots;
     private ArrayList<ZoneAttackType>			attackMethods;
     private Random								rGen;
     private int									match_num;
     private int[]								atk_used;
     private ZoneDist							redPlace;
-    private ArrayList<ZoneZone>					zones;
-    private int									reZone;
+    private int									randShots;
 
     @Override
     public void initialize(int numMatches, int numCaptains, String opponent) {
@@ -35,6 +36,9 @@ public class CommanderZone implements Captain {
         this.myFleet = new Fleet();
         this.shipsAlive = new boolean[]{true, true, true, true, true};
         this.myMatchShots = new boolean[10][10];
+        this.randShots = rGen.nextInt(5) + 2;
+        this.firstShots = new ArrayList<Coordinate>();
+        checkShots();
 
         for (int i = 0; i < 10; i++) {
             Arrays.fill(this.myMatchShots[i], false);
@@ -45,6 +49,10 @@ public class CommanderZone implements Captain {
         }
         else{
         	this.match_num++;
+        }
+        
+        for( int i = 0; i < this.attackMethods.size(); i++ ){
+        	this.atkHeats[i] = attackMethods.get(i).getHeat();
         }
         
         double best_val = 0;
@@ -59,9 +67,8 @@ public class CommanderZone implements Captain {
 	        		idx = k;
 	        	}
         	}
-        	double temp[][][] = this.attackMethods.get(idx).getHeat();
         	for( int l = 0; l < 100; l++){
-        		turn_heat[l%10][l/10][j] = temp[l%10][l/10][idx];
+        		turn_heat[l%10][l/10][j] = this.atkHeats[idx][l%10][l/10][j];
         	}
         	this.atk_used[idx]++;
         }
@@ -79,6 +86,17 @@ public class CommanderZone implements Captain {
         	for( int i =0; i < this.atk_used.length; i++){
         		System.out.println( "Attack "+i+" used "+( atk_used[i]* 100 / total )+"% of the time.");
         	}
+        	for( int j = 0; j < this.attackMethods.size(); j++){
+        		double total_tmp = 0;
+        		for( int k = 0; k < 100; k++  ){
+        			total_tmp += this.atkHeats[j][k%10][k/10][0];
+        			total_tmp += this.atkHeats[j][k%10][k/10][1];
+        			total_tmp += this.atkHeats[j][k%10][k/10][2];
+        			total_tmp += this.atkHeats[j][k%10][k/10][3];
+        			total_tmp += this.atkHeats[j][k%10][k/10][4];
+        		}
+        		System.out.println("total avg for method "+j+" is "+(total_tmp / 500.0));
+        	}
         }
         redPlace.refresh();
         boolean placed = false;
@@ -94,67 +112,35 @@ public class CommanderZone implements Captain {
         if(!placed){
         	redPlace.getFleet();
         }
-        
-        if(this.match_num == reZone){
-            reZone();
-        }
         shipWasHit = new boolean[]{ false, false, false, false, false};
     }
+    private void checkShots() {
+		this.firstShots.add(new Coordinate(0,0));
+		this.firstShots.add(new Coordinate(9,9));
+		this.firstShots.add(new Coordinate(0,9));
+		this.firstShots.add(new Coordinate(9,0));
+		this.firstShots.add(new Coordinate(5,5));
+		this.firstShots.add(new Coordinate(4,4));
+		this.firstShots.add(new Coordinate(4,6));
+		this.firstShots.add(new Coordinate(6,4));
+		this.firstShots.add(new Coordinate(7,5));
+		this.firstShots.add(new Coordinate(5,7));
+		this.firstShots.add(new Coordinate(5,0));
+		this.firstShots.add(new Coordinate(4,0));
+		this.firstShots.add(new Coordinate(0,5));
+		this.firstShots.add(new Coordinate(0,4));
+		this.firstShots.add(new Coordinate(5,9));
+		this.firstShots.add(new Coordinate(9,4));
+		this.firstShots.add(new Coordinate(4,9));
+		this.firstShots.add(new Coordinate(9,5));
+		this.firstShots.add(new Coordinate(2,2));
+		this.firstShots.add(new Coordinate(2,7));
+		this.firstShots.add(new Coordinate(7,2));
+		this.firstShots.add(new Coordinate(7,7));
+		
+	}
     
-    private void reZone(){
-    	boolean[][] isZoned = new boolean[10][10];
-    	int numZones = 6;
-    	this.zones = new ArrayList<ZoneZone>();    	
-    	Coordinate seed = new Coordinate(0,0);
-    	
-    	for( int i = 0; i < numZones; i++){
-
-    		double buffer = 1 + .03*(numZones - i);
-        	int tolerance = 40;
-    		int best = 0;
-    		for( int j = 0; j < 100; j++ ){
-    			int x = j % 10;
-    			int y = j / 10;
-    			if( !isZoned[x][y] && hitTheirShips[x][y] > best ){
-    				best = hitTheirShips[x][y];
-    				seed = new Coordinate(x,y);
-    			}
-    		}
-    		
-    		ArrayList<Coordinate> maybe = new ArrayList<Coordinate>();
-    		ZoneZone z = new ZoneZone();
-    		z.coords.add(seed);
-    		maybe.add(seed);
-    		for(int k = 0; k < maybe.size(); k++){
-    			ArrayList<Coordinate> temp = getAdj(maybe.get(k), isZoned);
-    			if( temp.size() == 0){
-    				maybe.remove(k);
-    				k--;
-    				continue;
-    			}
-    			for(Coordinate pos: temp){
-    				if( ( hitTheirShips[maybe.get(k).getX()][maybe.get(k).getY()] - hitTheirShips[pos.getX()][pos.getY()] ) < tolerance ){
-    					maybe.add( pos );
-    					z.coords.add( pos );
-    					isZoned[pos.getX()][pos.getY()] = true;
-    					//buffer +=.05;
-    				}else{
-    					//System.out.println("tolerance was "+tolerance);
-    					//System.out.println("difference was "+(hitTheirShips[maybe.get(k).getX()][maybe.get(k).getY()] - hitTheirShips[pos.getX()][pos.getY()]) );
-    				}
-    			}
-    			tolerance -= 6;
-    		}    
-    		z.buffer = buffer;
-    		System.out.println("Added new zone with "+z.coords.size()+" coords");
-    		this.zones.add(z);
-    	}    	
-    	
-    	//printArray(this.hitTheirShips);
-    	this.hitTheirShips = new int[10][10];
-    	this.reZone += 500;
-    }
-    private void printArray(int[][] array) {
+	private void printArray(int[][] array) {
 		for( int i = 0; i < 10; i++){
 			for( int j = 0; j < 10; j++){
 				System.out.print(array[j][i]+", ");
@@ -163,32 +149,6 @@ public class CommanderZone implements Captain {
 		}		
 	}
 
-	private ArrayList<Coordinate> getAdj(Coordinate c, boolean[][] zoned){
-    	ArrayList<Coordinate> ret = new ArrayList<Coordinate>();
-    	int x = c.getX();
-    	int y = c.getY();
-    	if( c.getX() < 9){
-    		if(!zoned[x+1][y]){
-    			ret.add(new Coordinate(x+1,y  ));
-    		}
-    	}
-    	if( c.getX() > 0){
-    		if(!zoned[x-1][y]){
-    			ret.add(new Coordinate(x-1,y  ));
-    		}
-    	}
-    	if( c.getY() < 9){
-    		if(!zoned[x][y+1]){
-    			ret.add(new Coordinate(x,y+1  ));
-    		}
-    	}
-    	if( c.getY() < 0){
-    		if(!zoned[x][y-1]){
-    			ret.add(new Coordinate(x,y-1  ));
-    		}
-    	}
-    	return ret;
-    }
     private void createPlacements(double[][][] scorer, ArrayList<ArrayList<ZonePlacement>> list) {
         for (int s = 0; s < 5; s++) {
             int shipLen = this.shipLength[s];
@@ -228,9 +188,7 @@ public class CommanderZone implements Captain {
         this.redPlace = new ZoneDist();
         this.wasWin = false;
         this.lastOpponent = opponent;
-        this.reZone = 1000;
         this.hitTheirShips = new int[10][10];
-        this.zones = new ArrayList<ZoneZone>();
         /*---------------------Attack Patterns-----------
          * 
          */
@@ -294,7 +252,7 @@ public class CommanderZone implements Captain {
         
         /*---------------------Attack Pattern 2-----------
          * last 100 hits
-         
+         */
         this.attackMethods.add(new ZoneAttackType(){
 
         	// int 0 hits, int 1 shots, double 1 heat 
@@ -368,7 +326,7 @@ public class CommanderZone implements Captain {
 			
         	
         });
-        */
+        
         /*---------------------Attack Pattern 3-----------
          * least shot i think
          */
@@ -427,7 +385,7 @@ public class CommanderZone implements Captain {
         });
         /*---------------------Attack Pattern 4-----------
          * what do...
-         
+         */
         this.attackMethods.add(new ZoneAttackType(){
 
         	// int 0 washits, int 1 nowhit, int 2 heading 
@@ -464,7 +422,87 @@ public class CommanderZone implements Captain {
 			}
 			
         });
-        */
+        
+        /*---------------------Attack Pattern 4-----------
+         * what do...
+         */
+        this.attackMethods.add(new ZoneAttackType(){
+
+        	// int 0 washits, int 1 nowhit, int 2 heading 
+			@Override
+			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
+				
+			}
+
+			@Override
+			public double[][][] getHeat() {
+				double [][][] ret = new double[10][10][5];
+				double[][] basic = new double[][]{
+						{.9,	.9,		.5,		.5, .8, .7, .6, .5, .9, .9},
+						{.9, 	.5, 	.3, 	.2, .3, .3, .2, .3, .5, .9},
+						{.5, 	.3, 	.3, 	.1, .2, .1, .2, .3, .3, .5},
+						{.5, 	.2, 	.1, 	.3, .1, .2, .1, .2, .2, .6},
+						{.8, 	.3, 	.2, 	.1, .3, .1, .2, .2, .3, .7},
+						{.7, 	.3, 	.1, 	.2, .1, .3, .1, .2, .3, .8},
+						{.6, 	.2, 	.2, 	.1, .2, .1, .2, .2, .2, .5},
+						{.5, 	.3, 	.1, 	.2, .1, .2, .1, .3, .3, .5},
+						{.9, 	.5, 	.3, 	.2, .3, .3, .2, .3, .5, .9},
+						{.9,	.9,		.5,		.6, .7, .8, .5, .5, .9, .9}
+				};
+				for( int i = 0; i < 100; i++){
+					ret[i/10][i%10][0] = basic[i/10][i%10];
+					ret[i/10][i%10][1] = basic[i/10][i%10];
+					ret[i/10][i%10][2] = basic[i/10][i%10];
+					ret[i/10][i%10][3] = basic[i/10][i%10];
+					ret[i/10][i%10][4] = basic[i/10][i%10];
+				}
+				
+				return ret;
+				
+			}
+			
+        });
+        
+        /*---------------------Attack Pattern 4-----------
+         * what do...
+         */
+        this.attackMethods.add(new ZoneAttackType(){
+
+        	// int 0 washits, int 1 nowhit, int 2 heading 
+			@Override
+			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
+				
+			}
+
+			@Override
+			public double[][][] getHeat() {
+				double [][][] ret = new double[10][10][5];
+				double[][] basic = new double[][]{
+						{.9,	.9,		.5,		.5, .8, .7, .6, .5, .9, .9},
+						{.9, 	.5, 	.3, 	.1, .3, .3, .1, .3, .5, .9},
+						{.5, 	.3, 	.3, 	.2, .1, .2, .1, .3, .3, .5},
+						{.5, 	.1, 	.2, 	.1, .2, .1, .3, .1, .1, .8},
+						{.6, 	.3, 	.1, 	.2, .1, .3, .1, .1, .3, .7},
+						{.7, 	.3, 	.2, 	.1, .3, .1, .2, .1, .3, .6},
+						{.8, 	.1, 	.1, 	.3, .1, .2, .1, .1, .1, .5},
+						{.5, 	.3, 	.2, 	.1, .2, .1, .2, .3, .3, .5},
+						{.9, 	.5, 	.3, 	.1, .3, .3, .1, .3, .5, .9},
+						{.9,	.9,		.5,		.8, .7, .6, .5, .5, .9, .9}
+				};
+				for( int i = 0; i < 100; i++){
+					ret[i/10][i%10][0] = basic[i/10][i%10];
+					ret[i/10][i%10][1] = basic[i/10][i%10];
+					ret[i/10][i%10][2] = basic[i/10][i%10];
+					ret[i/10][i%10][3] = basic[i/10][i%10];
+					ret[i/10][i%10][4] = basic[i/10][i%10];
+				}
+				
+				return ret;
+				
+			}
+			
+        });
+        
         this.lastTen = new double[10][attackMethods.size()][5];
         this.lastTenVal = new double[attackMethods.size()][5];
         this.atk_used = new int[attackMethods.size()];
@@ -473,10 +511,14 @@ public class CommanderZone implements Captain {
          *Init attack patterns 
          */            
         this.attackMethods.get(0).init(1, 2);
-        //this.attackMethods.get(1).init(1, 2);
-        this.attackMethods.get(1).init(1, 1);
-        //this.attackMethods.get(3).init(0, 0);
+        this.attackMethods.get(1).init(1, 2);
+        this.attackMethods.get(2).init(1, 1);
+        this.attackMethods.get(3).init(0, 0);
+        this.attackMethods.get(4).init(0, 0);
+        this.attackMethods.get(5).init(0, 0);
         this.match_num = 0;
+        
+        this.atkHeats = new double[this.attackMethods.size()][10][10][5];
     }
 
     @Override
@@ -489,6 +531,15 @@ public class CommanderZone implements Captain {
         this.turnNum++;
         Coordinate shot = new Coordinate(0, 0);
         
+        if( this.randShots > 0 ){
+        	this.randShots--;
+        	int ind = rGen.nextInt(this.firstShots.size());
+        	shot = this.firstShots.remove(ind);
+        	this.lastShot = shot;
+        	this.myMatchShots[shot.getX()][shot.getY()] = true;
+        	return shot;
+        }
+        
         double[][] turnHeat = new double[10][10];
         for (int s = 4; s >= 0; s--) {
             if (this.shipsAlive[s]) {
@@ -500,11 +551,7 @@ public class CommanderZone implements Captain {
                 }
             }
         }
-        for( ZoneZone z : this.zones ){
-        	for( Coordinate c : z.coords){
-        		turnHeat[c.getX()][c.getY()] *= z.buffer;
-        	}
-        }
+        
         int x = 0;
         int y = 0;
         double best = 0;
@@ -544,13 +591,13 @@ public class CommanderZone implements Captain {
             }
         } else {
         	
-        	for( ZoneAttackType pat : this.attackMethods){
-            	double val = pat.getHeat()[this.lastShot.getX()][this.lastShot.getY()][shipMod];
-            	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] -= this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod];
-            	this.lastTenVal[this.attackMethods.indexOf(pat)][shipMod] += val;
-            	this.lastTen[this.lastTenIdx[shipMod]][this.attackMethods.indexOf(pat)][shipMod] = val;
-            	pat.shotHere( true, shipMod, this.lastShot );
-            }
+        	for( int q = 0; q < this.attackMethods.size(); q++){
+        		double val = this.atkHeats[q][this.lastShot.getX()][this.lastShot.getY()][shipMod];
+        		this.lastTenVal[q][shipMod] -= this.lastTen[this.lastTenIdx[shipMod]][q][shipMod];
+            	this.lastTenVal[q][shipMod] += val;
+            	this.lastTen[this.lastTenIdx[shipMod]][q][shipMod] = val;
+            	this.attackMethods.get(q).shotHere(true, shipMod, this.lastShot);
+        	}
         	this.lastTenIdx[shipMod] = (this.lastTenIdx[shipMod] + 1) % 10;
         	this.hitTheirShips[lastShot.getX()][lastShot.getY()] ++;
             for (int s = 0; s < 5; s++) {
@@ -676,8 +723,8 @@ public class CommanderZone implements Captain {
 				}
 				int seed = rGen.nextInt(10);
 				switch (seed){
-				//case 1: randomPlace(i); break;
-				//case 2: secondPlace(i); break;
+				case 1: randomPlace(i); break;
+				case 2: secondPlace(i); break;
 				default: disPlace(i); break;
 				}
 			}
@@ -693,8 +740,8 @@ public class CommanderZone implements Captain {
 			for( int i = 0; i < 5; i++){
 				int seed = rGen.nextInt(10);
 				switch (seed){
-				//case 1: randomPlace(i); break;
-				//case 2: secondPlace(i); break;
+				case 1: randomPlace(i); break;
+				case 2: secondPlace(i); break;
 				default: disPlace(i); break;
 				}
 			}	
@@ -827,22 +874,6 @@ public class CommanderZone implements Captain {
 		}
 	}
 	
-	private class ZoneZone{
-		public ArrayList<Coordinate> 		coords;
-		public double 						buffer;
-		
-		public ZoneZone(){
-			coords = new ArrayList<Coordinate>();
-			buffer = 0;
-		}
-		public void addCoord(int x, int y){
-			coords.add(new Coordinate(x,y));
-		}
-		public void addCoord( Coordinate c ){
-			coords.add(c);
-		}
-		
-	}
 	private abstract class ZoneAttackType{
 		
 		public boolean				started;

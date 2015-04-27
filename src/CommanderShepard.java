@@ -632,10 +632,6 @@ public class CommanderShepard implements Captain {
 				switch (seed){
 				//case 1: randomPlace(i); break;
 				//case 2: secondPlace(i); break;
-				case 1:
-				case 2:
-				case 3:
-				case 4: randomPlace(i); break;
 				default: disPlace(i); break;
 				}
 			}	
