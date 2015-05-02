@@ -48,26 +48,70 @@ public class CommanderZone implements Captain {
         }
         else{
         	this.match_num++;
+        	if( match_num > 13000){
+        		redPlace.numFleets = 3;
+        	}
         }
         
-        for( int i = 0; i < this.attackMethods.size(); i++ ){
-        	this.atkHeats[i] = attackMethods.get(i).getHeat();
+        double total_avg[][] = new double[this.attackMethods.size()][5];
+        double total_cnt[] = new double[5];
+        for( int b = 0; b < this.attackMethods.size(); b++ ){
+	        double total_tmp[] = new double[5];
+			for( int k = 0; k < 100; k++  ){
+				total_tmp[0] += this.atkHeats[b][k%10][k/10][0];
+				total_tmp[1] += this.atkHeats[b][k%10][k/10][1];
+				total_tmp[2] += this.atkHeats[b][k%10][k/10][2];
+				total_tmp[3] += this.atkHeats[b][k%10][k/10][3];
+				total_tmp[4] += this.atkHeats[b][k%10][k/10][4];
+			}
+			total_cnt[0] += total_tmp[0];
+			total_avg[b][0] = total_tmp[0];
+			total_cnt[1] += total_tmp[1];
+			total_avg[b][1] = total_tmp[1];
+			total_cnt[2] += total_tmp[2];
+			total_avg[b][2] = total_tmp[2];
+			total_cnt[3] += total_tmp[3];
+			total_avg[b][3] = total_tmp[3];
+			total_cnt[4] += total_tmp[4];
+			total_avg[b][4] = total_tmp[4];
+        }
+
+        for( int i = 0; i < 5; i++){
+        	total_cnt[i] = total_cnt[i] / 5.0;
+        }
+        for( int c = 0; c < this.attackMethods.size(); c++){
+        	for( int d = 0; d < 5; d++){
+        		double factor = total_avg[c][d] / total_cnt[d];
+        		for( int e = 0; e < 100; e++){
+        			this.atkHeats[c][e%10][e/10][d] = factor * attackMethods.get(c).getHeat()[e%10][e/10][d];
+        		}
+        	}
         }
         
         double best_val = 0;
+        double sec_best_val = 0;
         int idx = 0;
+        int sec_idx = 0;
         double turn_heat[][][] = new double[10][10][5];
         for( int j = 0; j < 5; j++){
-        	idx = 0;
         	best_val = 0;
-        	for( int k=0; k < attackMethods.size(); k++){
+        	sec_best_val = 0;
+        	for( int k = 0; k < attackMethods.size(); k++){
 	        	if( this.lastTenVal[k][j] > best_val){
 	        		best_val = this.lastTenVal[k][j];
 	        		idx = k;
 	        	}
         	}
+        	for( int g = 0; g < attackMethods.size(); g++){
+        		if( g!= idx ){
+		        	if( this.lastTenVal[g][j] > sec_best_val){
+		        		sec_best_val = this.lastTenVal[g][j];
+		        		sec_idx = g;
+		        	}
+        		}
+        	}
         	for( int l = 0; l < 100; l++){
-        		turn_heat[l%10][l/10][j] = this.atkHeats[idx][l%10][l/10][j];
+        		turn_heat[l%10][l/10][j] = this.atkHeats[idx][l%10][l/10][j] + ( .5 * this.atkHeats[sec_idx][l%10][l/10][j] );
         	}
         	this.atk_used[idx]++;
         }
@@ -77,8 +121,9 @@ public class CommanderZone implements Captain {
         //placement
         this.turnNum = 0;
         
+        //TODO FIX AVERAGES 
         if( this.match_num == (numMatches-1)){
-        	int total = 0;
+        	int total = 1;
         	for( int num: this.atk_used){
         		total += num;
         	}
@@ -96,6 +141,15 @@ public class CommanderZone implements Captain {
         		}
         		System.out.println("total avg for method "+j+" is "+(total_tmp / 500.0));
         	}
+        	
+        	double max = 5 * this.match_num;
+        	for( int k = 0; k < redPlace.numFleets; k++ ){
+        		System.out.println("Placement " + k + " used "+ ( ( (double)redPlace.used[k] / max) * 100) +"% of the time.");
+        	}
+        	
+        	for( int g = 0; g < 5; g++){
+        		System.out.println("Ship "+g+" is "+redPlace.shipNumbers[g][5][5]+" and "+redPlace.shipNumbers[g][5][6]);
+        	}
         }
         redPlace.refresh();
         if( this.wasWin){
@@ -108,29 +162,46 @@ public class CommanderZone implements Captain {
         shipWasHit = new boolean[]{ false, false, false, false, false};
     }
     private void checkShots() {
-    	//TODO
-		this.firstShots.add(new Coordinate(0,0));
-		this.firstShots.add(new Coordinate(9,9));
-		this.firstShots.add(new Coordinate(0,9));
-		this.firstShots.add(new Coordinate(9,0));
-		this.firstShots.add(new Coordinate(5,5));
-		this.firstShots.add(new Coordinate(4,4));
-		this.firstShots.add(new Coordinate(4,6));
-		this.firstShots.add(new Coordinate(6,4));
-		this.firstShots.add(new Coordinate(7,5));
-		this.firstShots.add(new Coordinate(5,7));
-		this.firstShots.add(new Coordinate(5,0));
-		this.firstShots.add(new Coordinate(4,0));
-		this.firstShots.add(new Coordinate(0,5));
-		this.firstShots.add(new Coordinate(0,4));
-		this.firstShots.add(new Coordinate(5,9));
-		this.firstShots.add(new Coordinate(9,4));
-		this.firstShots.add(new Coordinate(4,9));
-		this.firstShots.add(new Coordinate(9,5));
-		this.firstShots.add(new Coordinate(2,2));
-		this.firstShots.add(new Coordinate(2,7));
-		this.firstShots.add(new Coordinate(7,2));
-		this.firstShots.add(new Coordinate(7,7));
+    	
+    	if( this.match_num % 2 == 0){
+    		this.firstShots.add(new Coordinate(0,0));
+    		this.firstShots.add(new Coordinate(0,2));
+    		this.firstShots.add(new Coordinate(0,4));
+    		this.firstShots.add(new Coordinate(0,6));
+    		this.firstShots.add(new Coordinate(0,8));
+    		this.firstShots.add(new Coordinate(2,0));
+    		this.firstShots.add(new Coordinate(4,0));
+    		this.firstShots.add(new Coordinate(6,0));
+    		this.firstShots.add(new Coordinate(8,0));
+    		this.firstShots.add(new Coordinate(9,1));
+    		this.firstShots.add(new Coordinate(9,3));
+    		this.firstShots.add(new Coordinate(9,5));
+    		this.firstShots.add(new Coordinate(9,7));
+    		this.firstShots.add(new Coordinate(9,9));
+    		this.firstShots.add(new Coordinate(1,9));
+    		this.firstShots.add(new Coordinate(3,9));
+    		this.firstShots.add(new Coordinate(5,9));
+    		this.firstShots.add(new Coordinate(7,9));
+    	}else{
+    		this.firstShots.add(new Coordinate(0,9));
+    		this.firstShots.add(new Coordinate(0,7));
+    		this.firstShots.add(new Coordinate(0,5));
+    		this.firstShots.add(new Coordinate(0,3));
+    		this.firstShots.add(new Coordinate(0,1));
+    		this.firstShots.add(new Coordinate(9,0));
+    		this.firstShots.add(new Coordinate(7,0));
+    		this.firstShots.add(new Coordinate(5,0));
+    		this.firstShots.add(new Coordinate(3,0));
+    		this.firstShots.add(new Coordinate(1,0));
+    		this.firstShots.add(new Coordinate(9,2));
+    		this.firstShots.add(new Coordinate(9,4));
+    		this.firstShots.add(new Coordinate(9,6));
+    		this.firstShots.add(new Coordinate(9,8));
+    		this.firstShots.add(new Coordinate(2,9));
+    		this.firstShots.add(new Coordinate(4,9));
+    		this.firstShots.add(new Coordinate(6,9));
+    		this.firstShots.add(new Coordinate(8,9));    		
+    	}
 		
 	}
     
@@ -166,7 +237,6 @@ public class CommanderZone implements Captain {
                     places.add(p2);
                 }
             }
-            //System.out.println("Mod "+s+" ships: "+places.size());
             list.add(places);
         }
     }
@@ -221,6 +291,7 @@ public class CommanderZone implements Captain {
 					 started = true;
 				}
 				
+				/*
 				double [][][] ret = new double[10][10][5];
 				double biggest = 0;
 				for (int i = 0; i < 100; i++) {
@@ -238,6 +309,13 @@ public class CommanderZone implements Captain {
 					for (int j = 0; j < 5; j++){
 						ret[i % 10][i / 10][j] /= biggest;
 					}
+				}
+				*/
+				double [][][] ret = new double[10][10][5];
+				for (int i = 0; i < 100; i++) {
+					for (int j = 0; j < 5; j++){
+						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
+					}						
 				}
 				return ret;
 			}
@@ -257,21 +335,6 @@ public class CommanderZone implements Captain {
         	
 			@Override
 			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
-				
-				if( !started ){
-					Arrays.fill(oldHit, false);
-					 for (int j = 0; j < 100; j++) {
-
-						 oldShots[j] = new Coordinate(j % 10,j / 10);
-						 shipIntArrays[j % 10][j / 10][0][1] = 2;				                
-		                 for (int k = 0; k < 5; k++) {			                	 
-		                	 shipIntArrays[j % 10][j / 10][k][0] = 1;
-		                	 shipDoubleArrays[j % 10][j / 10][k][0] = (double) shipIntArrays[j % 10][j / 10][k][0]/ (double) shipIntArrays[j % 10][j / 10][0][1];
-		                 }
-			          }
-
-					 started = true;
-				}
 
 				if( oldHit[shotIdx] ){
 					shipIntArrays[oldShots[shotIdx].getX()][oldShots[shotIdx].getY()][shipHitMod[shotIdx]][0]--;
@@ -297,6 +360,20 @@ public class CommanderZone implements Captain {
 
 			@Override
 			public double[][][] getHeat() {
+				if( !started ){
+					Arrays.fill(oldHit, false);
+					 for (int j = 0; j < 100; j++) {
+
+						 oldShots[j] = new Coordinate(j % 10,j / 10);
+						 shipIntArrays[j % 10][j / 10][0][1] = 2;				                
+		                 for (int k = 0; k < 5; k++) {			                	 
+		                	 shipIntArrays[j % 10][j / 10][k][0] = 1;
+		                	 shipDoubleArrays[j % 10][j / 10][k][0] = (double) shipIntArrays[j % 10][j / 10][k][0]/ (double) shipIntArrays[j % 10][j / 10][0][1];
+		                 }
+			          }
+					 started = true;
+				}
+				/*
 				double [][][] ret = new double[10][10][5];
 				double biggest = 0;
 				for (int i = 0; i < 100; i++) {
@@ -315,6 +392,13 @@ public class CommanderZone implements Captain {
 						ret[i % 10][i / 10][j] /= biggest;
 					}
 				}
+				*/
+				double [][][] ret = new double[10][10][5];
+				for (int i = 0; i < 100; i++) {
+					for (int j = 0; j < 5; j++){
+						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
+					}
+				}
 				return ret;
 			}
 			
@@ -322,21 +406,13 @@ public class CommanderZone implements Captain {
         });
         
         /*---------------------Attack Pattern 3-----------
-         * least shot i think
+         * 
          */
         this.attackMethods.add(new ZoneAttackType(){
 
         	/* int 0 hits, int 1 shots, double 1 heat */
 			@Override
-			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
-				
-				if( !started ){
-					 for (int j = 0; j < 100; j++) {						 
-			                shipIntArrays[j % 10][j / 10][0][0] = 2;				                
-			          }
-					 started = true;
-				}
-				
+			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {				
 				shipIntArrays[c.getX()][c.getY()][0][0]++;
 				
 				for( int m = 0; m < 5; m++){
@@ -346,6 +422,13 @@ public class CommanderZone implements Captain {
 
 			@Override
 			public double[][][] getHeat() {
+				if( !started ){
+					 for (int j = 0; j < 100; j++) {						 
+			                shipIntArrays[j % 10][j / 10][0][0] = 2;				                
+			          }
+					 started = true;
+				}
+				/*
 				double [][][] ret = new double[10][10][5];
 				double biggest = 0;
 				double smallest = Double.MAX_VALUE;
@@ -371,6 +454,13 @@ public class CommanderZone implements Captain {
 					for (int j = 0; j < 5; j++){
 						ret[i % 10][i / 10][j] -= smallest;
 						ret[i % 10][i / 10][j] /= biggest;
+					}
+				}
+				*/
+				double [][][] ret = new double[10][10][5];
+				for (int i = 0; i < 100; i++) {
+					for (int j = 0; j < 5; j++){
+						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
 					}
 				}
 				return ret;
@@ -496,6 +586,41 @@ public class CommanderZone implements Captain {
 			}
 			
         });
+        /*---------------------Attack Pattern 5-----------
+         * where I've shot the least
+         * 
+         */
+        this.attackMethods.add(new ZoneAttackType(){
+
+			@Override
+			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {
+				shipIntArrays[c.getX()][c.getY()][0][0]++;
+				
+				if( shipIntArrays[c.getX()][c.getY()][0][0] > accuracy){
+					accuracy = shipIntArrays[c.getX()][c.getY()][0][0];
+				}
+			}
+
+			@Override
+			public double[][][] getHeat() {
+				double [][][] ret = new double[10][10][5];
+				
+				for( int i = 0; i < 100; i++){
+					int x = i % 10;
+					int y = i / 10;
+					double val = 1 - ((double)shipIntArrays[x][y][0][0] / accuracy);
+					ret[x][y][0] = val;
+					ret[x][y][1] = val;
+					ret[x][y][2] = val;
+					ret[x][y][3] = val;
+					ret[x][y][4] = val;
+				}
+				
+				return ret;
+				
+			}
+			
+        });
         
         this.lastTen = new double[10][attackMethods.size()][5];
         this.lastTenVal = new double[attackMethods.size()][5];
@@ -510,6 +635,7 @@ public class CommanderZone implements Captain {
         this.attackMethods.get(3).init(0, 0);
         this.attackMethods.get(4).init(0, 0);
         this.attackMethods.get(5).init(0, 0);
+        this.attackMethods.get(6).init(0, 1);
         this.match_num = 0;
         
         this.atkHeats = new double[this.attackMethods.size()][10][10][5];
@@ -524,9 +650,7 @@ public class CommanderZone implements Captain {
     public Coordinate makeAttack() {
         this.turnNum++;
         Coordinate shot = new Coordinate(0, 0);
-        this.lastShot = shot;
-        return shot;
-        /*
+        
         if( this.randShots > 0 ){
         	this.randShots--;
         	int ind = rGen.nextInt(this.firstShots.size());
@@ -563,12 +687,10 @@ public class CommanderZone implements Captain {
         this.lastShot = shot;
         this.myMatchShots[shot.getX()][shot.getY()] = true;
         return shot;
-        */
     }
 
     @Override
     public void resultOfAttack(int result) {
-    	/*
     	int shipMod = result % 10;
         if (result == MISS || result == DEFEATED) {
         	
@@ -619,8 +741,10 @@ public class CommanderZone implements Captain {
                     places.removeAll(bads);
                 }
             }
+            if( result / 10 == 2 ){
+            	this.shipsAlive[shipMod] = false;
+            }
         }
-        */
     }
 
     @Override
@@ -634,12 +758,35 @@ public class CommanderZone implements Captain {
     @Override
     public void resultOfGame(int result) {
         this.wasWin = ( result == WON );
+        if( !wasWin ){
+        	for( int i = 0; i < 5; i++){
+        		if(shipsAlive[i] && (theirPlacements.get(i).size() < 3) ){
+        			for( ZonePlacement p : theirPlacements.get(i)){
+        				for( Coordinate c: p.coords){
+        					int x = c.getX();
+        					int y = c.getY();
+        					if( !this.myMatchShots[x][y] ){
+        						for( int q = 0; q < this.attackMethods.size(); q++){
+        			        		double val = this.atkHeats[q][x][y][i];
+        			        		this.lastTenVal[q][i] -= this.lastTen[this.lastTenIdx[i]][q][i];
+        			            	this.lastTenVal[q][i] += val;
+        			            	this.lastTen[this.lastTenIdx[i]][q][i] = val;
+        			            	this.attackMethods.get(q).shotHere(true, i, c);
+        			        	}
+        						this.myMatchShots[x][y] = true;
+        					}
+        				}
+        			}
+        		}
+        	}
+        }
     }
 	
 	private class ZonePlacement {
 
         public Coordinate[] coords;
         public double score = 0;
+        public double scoreTwo = 0;
         public int[] shipLength = {2, 3, 3, 4, 5};
         public int direc;
 
@@ -696,23 +843,27 @@ public class CommanderZone implements Captain {
 	 **********************************************************************/
 	private class ZoneDist{
 		
-		private ArrayList<ZonePlacement[]> placements;
-		private int[][][] shipNumbers;
-		int[] lastInd;
+		public ArrayList<ZonePlacement[]> placements;
+		public int[][][] shipNumbers;
+		public int[] lastInd;
 		private int[][] shipInd;
 		private int[][] turnsToHit;
+		private int[][] theirShots;
 		private Fleet[] fleets;
 		private Fleet gameFleet;
-		private int numFleets = 3;
+		public int numFleets = 4;
 		private int turnNum;
+		public int[] used;
 		
 		public ZoneDist(){
 			//create levels to store ship config ind's
+			used = new int[numFleets];
 			shipNumbers = new int[5][10][10];
 			lastInd = new int[5];
 			shipInd = new int[numFleets][5];
 			turnsToHit = new int[numFleets][5];
 			fleets = new Fleet[numFleets];
+			theirShots = new int[10][10];
 			refresh();
 			remakeFleets();
 			turnNum = 0;
@@ -720,6 +871,7 @@ public class CommanderZone implements Captain {
 		
 		public void shotAt(Coordinate c){
 			turnNum++;
+			this.theirShots[c.getX()][c.getY()]++;
 			for(int i = 0; i < numFleets; i++ ){
 				int atk = fleets[i].attacked(c);
 				if( atk != MISS && atk != DEFEATED){
@@ -754,8 +906,10 @@ public class CommanderZone implements Captain {
 						}
 					}
 					if(gameFleet.placeShip(placements.get(i)[shipInd[ind][i]].coords[0], placements.get(i)[shipInd[ind][i]].direc, i)){
+						used[ind]++;
 						lastInd[i] = shipInd[ind][i];
 					}else{
+						used[ind]++;
 						lastInd[i] = getShip(i, ind, gameFleet);
 					}
 				}
@@ -787,8 +941,10 @@ public class CommanderZone implements Captain {
 					}
 				}
 				if(gameFleet.placeShip(placements.get(i)[shipInd[ind][i]].coords[0], placements.get(i)[shipInd[ind][i]].direc, i)){
+					used[ind]++;
 					lastInd[i] = shipInd[ind][i];
 				}else{
+					used[ind]++;
 					lastInd[i] = getShip(i, ind, gameFleet);
 				}
 			}	
@@ -811,6 +967,7 @@ public class CommanderZone implements Captain {
 			case 0: ret = randomPlace(shipMod, fl); break;
 			case 1: ret = disPlace(shipMod, fl); break;
 			case 2: ret = secondPlace(shipMod, fl); break;
+			case 3: ret = ratePlace(shipMod, fl); break;
 			default: ret = disPlace(shipMod, fl); break;
 			}
 			return ret;
@@ -900,6 +1057,33 @@ public class CommanderZone implements Captain {
 			return placeInd;
 		}	
 		
+		public int ratePlace( int shipMod, Fleet fl ){
+			int ind = 0;
+			int placeInd = 0;
+			int smallest = Integer.MAX_VALUE;
+			ZonePlacement best = new ZonePlacement(0, 0, new Coordinate(0, 0) );
+			for( ZonePlacement sp : placements.get(shipMod)){
+				if( sp.scoreTwo < smallest ){
+					boolean ok = true;
+					for(Coordinate c: sp.coords){
+						for( Ship p: fl.fleet){
+							if( p != null && p.isOnShip(c)){
+								ok = false;
+								break;
+							}
+						}
+					}
+					if( ok ){
+						smallest = (int) sp.scoreTwo;
+						best = sp;
+						placeInd = ind;
+					}
+				}
+				ind++;
+			}
+			fl.placeShip( best.coords[0], best.direc, shipMod);			
+			return placeInd;			
+		}
 		public void remakeFleets(){
 			//remake all fleets
 			for( int p = 0; p < numFleets; p++){
@@ -923,13 +1107,20 @@ public class CommanderZone implements Captain {
 	                	
 	                    double score = 0;
 	                    double score2 = 0;
+	                    
+	                    double scoreA = 0;
+	                    double scoreA2 = 0;
 
 	                    for (int k = 0; k < shipLen; k++) {
+	                    	scoreA = theirShots[i + k][j];
+	                    	scoreA2 = theirShots[j][i + k];
 	                        score += shipNumbers[s][i + k][j];
 	                        score2 += shipNumbers[s][j][i + k];
 	                    }
 	                    p.score = score;
+	                    p.scoreTwo = scoreA;
 	                    p2.score = score2;
+	                    p2.scoreTwo = scoreA2;
 	                    
 	                    places[ind] = p;
 	                    ind++;
@@ -949,10 +1140,6 @@ public class CommanderZone implements Captain {
 		public double 				accuracy;
 		public double[][][][] 		shipDoubleArrays;
 		public int[][][][] 			shipIntArrays;
-		
-		public ZoneAttackType(){
-			
-		}
 
 		public void init( int num_dbl_arrays, int num_int_arrays ){
 			shipDoubleArrays = new double[10][10][5][num_dbl_arrays];
