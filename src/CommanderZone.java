@@ -18,7 +18,6 @@ public class CommanderZone implements Captain {
     private int[][]								hitTheirShips;
     private double[][][][]						atkHeats;
     private boolean 							wasWin;
-    private int 								turnNum;
     private ArrayList<Coordinate>				firstShots;
     private ArrayList<ZoneAttackType>			attackMethods;
     private Random								rGen;
@@ -48,9 +47,15 @@ public class CommanderZone implements Captain {
         }
         else{
         	this.match_num++;
+        	/*
         	if( match_num > 13000){
         		redPlace.numFleets = 3;
         	}
+        	*/
+        }
+        
+        for( int i = 0; i < this.attackMethods.size(); i++ ){
+        	this.atkHeats[i] = attackMethods.get(i).getHeat();
         }
         
         double total_avg[][] = new double[this.attackMethods.size()][5];
@@ -77,13 +82,13 @@ public class CommanderZone implements Captain {
         }
 
         for( int i = 0; i < 5; i++){
-        	total_cnt[i] = total_cnt[i] / 5.0;
+        	total_cnt[i] = total_cnt[i] / (double)this.attackMethods.size();
         }
         for( int c = 0; c < this.attackMethods.size(); c++){
         	for( int d = 0; d < 5; d++){
-        		double factor = total_avg[c][d] / total_cnt[d];
+        		double factor = total_cnt[d] / total_avg[c][d];
         		for( int e = 0; e < 100; e++){
-        			this.atkHeats[c][e%10][e/10][d] = factor * attackMethods.get(c).getHeat()[e%10][e/10][d];
+        			this.atkHeats[c][e%10][e/10][d] *= factor;
         		}
         	}
         }
@@ -117,11 +122,7 @@ public class CommanderZone implements Captain {
         }
         
         createPlacements(turn_heat, this.theirPlacements);
-        //this.myFleet = randomFleet();
-        //placement
-        this.turnNum = 0;
-        
-        //TODO FIX AVERAGES 
+        /*
         if( this.match_num == (numMatches-1)){
         	int total = 1;
         	for( int num: this.atk_used){
@@ -147,10 +148,8 @@ public class CommanderZone implements Captain {
         		System.out.println("Placement " + k + " used "+ ( ( (double)redPlace.used[k] / max) * 100) +"% of the time.");
         	}
         	
-        	for( int g = 0; g < 5; g++){
-        		System.out.println("Ship "+g+" is "+redPlace.shipNumbers[g][5][5]+" and "+redPlace.shipNumbers[g][5][6]);
-        	}
         }
+        */
         redPlace.refresh();
         if( this.wasWin){
         	this.redPlace.getFleet(this.shipWasHit);
@@ -204,15 +203,6 @@ public class CommanderZone implements Captain {
     	}
 		
 	}
-    
-	private void printArray(int[][] array) {
-		for( int i = 0; i < 10; i++){
-			for( int j = 0; j < 10; j++){
-				System.out.print(array[j][i]+", ");
-			}
-			System.out.println();		
-		}		
-	}
 
     private void createPlacements(double[][][] scorer, ArrayList<ArrayList<ZonePlacement>> list) {
         for (int s = 0; s < 5; s++) {
@@ -243,13 +233,7 @@ public class CommanderZone implements Captain {
     
     private void newEnemy(String opponent){
 
-       	/*------------------------------------------------------------------
-       	 * 
-       	 * ReInitialize enemy dependant variables
-       	 * 
-       	 -----------------------------------------------------------------*/
-    	this.turnNum = 50;
-        this.redPlace = new ZoneDist();
+       	this.redPlace = new ZoneDist();
         this.wasWin = false;
         this.lastOpponent = opponent;
         this.hitTheirShips = new int[10][10];
@@ -257,7 +241,7 @@ public class CommanderZone implements Captain {
          * 
          */
         this.attackMethods = new ArrayList<ZoneAttackType>();
-        /*---------------------Attack Pattern 1-----------
+        /*---------------------Attack Pattern 0-----------
          * standard shots/misses
          */
         this.attackMethods.add(new ZoneAttackType(){
@@ -290,27 +274,6 @@ public class CommanderZone implements Captain {
 			          }
 					 started = true;
 				}
-				
-				/*
-				double [][][] ret = new double[10][10][5];
-				double biggest = 0;
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
-						if( shipDoubleArrays[i % 10][i / 10][j][0] > biggest ){
-							biggest = shipDoubleArrays[i % 10][i / 10][j][0];
-						}
-					}						
-				}
-				if( biggest == 0 ){
-					biggest = 1;
-				}
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] /= biggest;
-					}
-				}
-				*/
 				double [][][] ret = new double[10][10][5];
 				for (int i = 0; i < 100; i++) {
 					for (int j = 0; j < 5; j++){
@@ -322,7 +285,7 @@ public class CommanderZone implements Captain {
 			
         });
         
-        /*---------------------Attack Pattern 2-----------
+        /*---------------------Attack Pattern 1-----------
          * last 100 hits
          */
         this.attackMethods.add(new ZoneAttackType(){
@@ -373,26 +336,6 @@ public class CommanderZone implements Captain {
 			          }
 					 started = true;
 				}
-				/*
-				double [][][] ret = new double[10][10][5];
-				double biggest = 0;
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
-						if( shipDoubleArrays[i % 10][i / 10][j][0] > biggest ){
-							biggest = shipDoubleArrays[i % 10][i / 10][j][0];
-						}
-					}						
-				}
-				if( biggest == 0 ){
-					biggest = 1;
-				}
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] /= biggest;
-					}
-				}
-				*/
 				double [][][] ret = new double[10][10][5];
 				for (int i = 0; i < 100; i++) {
 					for (int j = 0; j < 5; j++){
@@ -405,18 +348,17 @@ public class CommanderZone implements Captain {
         	
         });
         
-        /*---------------------Attack Pattern 3-----------
+        /*---------------------Attack Pattern 2-----------
          * 
          */
         this.attackMethods.add(new ZoneAttackType(){
 
-        	/* int 0 hits, int 1 shots, double 1 heat */
 			@Override
 			public void shotHere(boolean wasHit, int shipMod, Coordinate c) {				
 				shipIntArrays[c.getX()][c.getY()][0][0]++;
 				
 				for( int m = 0; m < 5; m++){
-					shipDoubleArrays[c.getX()][c.getY()][m][0] = 800000.0 / (double) shipIntArrays[c.getX()][c.getY()][0][0];
+					shipDoubleArrays[c.getX()][c.getY()][m][0] = 1.0 / (double) shipIntArrays[c.getX()][c.getY()][0][0];
 				}
 			}
 
@@ -424,39 +366,10 @@ public class CommanderZone implements Captain {
 			public double[][][] getHeat() {
 				if( !started ){
 					 for (int j = 0; j < 100; j++) {						 
-			                shipIntArrays[j % 10][j / 10][0][0] = 2;				                
+			                shipIntArrays[j % 10][j / 10][0][0] = 1;				                
 			          }
 					 started = true;
 				}
-				/*
-				double [][][] ret = new double[10][10][5];
-				double biggest = 0;
-				double smallest = Double.MAX_VALUE;
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] = shipDoubleArrays[i % 10][i / 10][j][0];
-						if( shipDoubleArrays[i % 10][i / 10][j][0] > biggest ){
-							biggest = shipDoubleArrays[i % 10][i / 10][j][0];
-						}
-						if( shipDoubleArrays[i % 10][i / 10][j][0] < smallest ){
-							smallest = shipDoubleArrays[i % 10][i / 10][j][0];
-						}
-					}						
-				}
-				if( biggest == 0 ){
-					biggest = 1;
-				}
-				if(smallest == biggest){
-					smallest = .5*biggest;
-				}
-				biggest -= smallest;
-				for (int i = 0; i < 100; i++) {
-					for (int j = 0; j < 5; j++){
-						ret[i % 10][i / 10][j] -= smallest;
-						ret[i % 10][i / 10][j] /= biggest;
-					}
-				}
-				*/
 				double [][][] ret = new double[10][10][5];
 				for (int i = 0; i < 100; i++) {
 					for (int j = 0; j < 5; j++){
@@ -467,7 +380,7 @@ public class CommanderZone implements Captain {
 			}
 			
         });
-        /*---------------------Attack Pattern 4-----------
+        /*---------------------Attack Pattern 3-----------
          * what do...
          */
         this.attackMethods.add(new ZoneAttackType(){
@@ -547,7 +460,7 @@ public class CommanderZone implements Captain {
 			
         });
         
-        /*---------------------Attack Pattern 4-----------
+        /*---------------------Attack Pattern 5-----------
          * what do...
          */
         this.attackMethods.add(new ZoneAttackType(){
@@ -586,7 +499,7 @@ public class CommanderZone implements Captain {
 			}
 			
         });
-        /*---------------------Attack Pattern 5-----------
+        /*---------------------Attack Pattern 6-----------
          * where I've shot the least
          * 
          */
@@ -648,7 +561,6 @@ public class CommanderZone implements Captain {
 
     @Override
     public Coordinate makeAttack() {
-        this.turnNum++;
         Coordinate shot = new Coordinate(0, 0);
         
         if( this.randShots > 0 ){
@@ -834,9 +746,7 @@ public class CommanderZone implements Captain {
 	
 	/***********************************************************************
 	 * 
-	 * A tree object that keeps track of sequences of indexes stored as shorts.
-	 * The tree will grow and link nodes together as they are used in a placement.
-	 * It also keep track of the last number of turns that link ended in.
+	 *
 	 * 
 	 * @author John
 	 *
@@ -844,7 +754,8 @@ public class CommanderZone implements Captain {
 	private class ZoneDist{
 		
 		public ArrayList<ZonePlacement[]> placements;
-		public int[][][] shipNumbers;
+		//public int[][][] shipNumbers;
+		public int[][] placementCount;
 		public int[] lastInd;
 		private int[][] shipInd;
 		private int[][] turnsToHit;
@@ -856,9 +767,8 @@ public class CommanderZone implements Captain {
 		public int[] used;
 		
 		public ZoneDist(){
-			//create levels to store ship config ind's
 			used = new int[numFleets];
-			shipNumbers = new int[5][10][10];
+			placementCount = new int[5][180];
 			lastInd = new int[5];
 			shipInd = new int[numFleets][5];
 			turnsToHit = new int[numFleets][5];
@@ -916,9 +826,7 @@ public class CommanderZone implements Captain {
 			}
 			
 			for( int k = 0; k < 5; k++){
-				for( Coordinate c: placements.get(k)[lastInd[k]].coords ){
-					shipNumbers[k][c.getX()][c.getY()]++;
-				}
+				placementCount[k][lastInd[k]]++;
 			}
 			
 			if(!gameFleet.isFleetReady()){
@@ -950,9 +858,7 @@ public class CommanderZone implements Captain {
 			}	
 			
 			for( int k = 0; k < 5; k++){
-				for( Coordinate c: placements.get(k)[lastInd[k]].coords ){
-					shipNumbers[k][c.getX()][c.getY()]++;
-				}
+				placementCount[k][lastInd[k]]++;
 			}
 			
 			if(!gameFleet.isFleetReady()){
@@ -993,8 +899,9 @@ public class CommanderZone implements Captain {
 			int placeInd = 0;
 			ZonePlacement best = placements.get(shipMod)[0];
 			ZonePlacement secondBest = placements.get(shipMod)[0];
-			for( ZonePlacement sp : placements.get(shipMod)){				
-				if( sp.score <= smallest ){
+			for( int i = 0; i < placements.get(shipMod).length; i++){
+				ZonePlacement sp = placements.get(shipMod)[i];
+				if( placementCount[shipMod][i] < smallest ){
 					boolean ok = true;
 					for(Coordinate c: sp.coords){
 						for( Ship p: fl.fleet){
@@ -1007,14 +914,14 @@ public class CommanderZone implements Captain {
 					if( ok ){
 						if( smallest == Integer.MAX_VALUE){
 							secondBest = sp;
-							smallest = (int) sp.score;
+							smallest = placementCount[shipMod][i];
 							secondPlaceInd = ind;
 							placeInd = ind;
 							best = sp;
 						}
 						else{
 							secondBest = best;
-							smallest = (int) sp.score;
+							smallest = placementCount[shipMod][i];
 							secondPlaceInd = placeInd;
 							placeInd = ind;
 							best = sp;
@@ -1033,8 +940,9 @@ public class CommanderZone implements Captain {
 			int placeInd = 0;
 			int smallest = Integer.MAX_VALUE;
 			ZonePlacement best = new ZonePlacement(0, 0, new Coordinate(0, 0) );
-			for( ZonePlacement sp : placements.get(shipMod)){
-				if( sp.score < smallest ){
+			for( int i = 0; i < placements.get(shipMod).length; i++){
+				ZonePlacement sp = placements.get(shipMod)[i];
+				if( placementCount[shipMod][i] < smallest ){
 					boolean ok = true;
 					for(Coordinate c: sp.coords){
 						for( Ship p: fl.fleet){
@@ -1045,15 +953,14 @@ public class CommanderZone implements Captain {
 						}
 					}
 					if( ok ){
-						smallest = (int) sp.score;
+						smallest = placementCount[shipMod][i];
 						best = sp;
 						placeInd = ind;
 					}
 				}
 				ind++;
 			}
-			fl.placeShip( best.coords[0], best.direc, shipMod);
-			
+			fl.placeShip( best.coords[0], best.direc, shipMod);			
 			return placeInd;
 		}	
 		
@@ -1104,9 +1011,6 @@ public class CommanderZone implements Captain {
 	                for (int j = 0; j < 10; j++) {
 	                	ZonePlacement p = new ZonePlacement(0, s, new Coordinate(i, j));
 	                	ZonePlacement p2 = new ZonePlacement(1, s, new Coordinate(j, i));
-	                	
-	                    double score = 0;
-	                    double score2 = 0;
 	                    
 	                    double scoreA = 0;
 	                    double scoreA2 = 0;
@@ -1114,12 +1018,8 @@ public class CommanderZone implements Captain {
 	                    for (int k = 0; k < shipLen; k++) {
 	                    	scoreA = theirShots[i + k][j];
 	                    	scoreA2 = theirShots[j][i + k];
-	                        score += shipNumbers[s][i + k][j];
-	                        score2 += shipNumbers[s][j][i + k];
 	                    }
-	                    p.score = score;
 	                    p.scoreTwo = scoreA;
-	                    p2.score = score2;
 	                    p2.scoreTwo = scoreA2;
 	                    
 	                    places[ind] = p;
@@ -1128,7 +1028,6 @@ public class CommanderZone implements Captain {
 	                    ind++;
 	                }
 	            }
-	            //System.out.println("Mod "+s+" ships: "+places.size());
 	            placements.add(places);
 	        }
 		}
@@ -1148,9 +1047,6 @@ public class CommanderZone implements Captain {
 			started = false;
 		}
 		public abstract void shotHere( boolean wasHit, int shipMod, Coordinate c);
-		public abstract double[][][] getHeat();
-		
-	}
-	
-	
+		public abstract double[][][] getHeat();		
+	}	
 }

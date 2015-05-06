@@ -119,6 +119,7 @@ public class CaptainStanleyHTweedle implements Captain, Constants {
             }
         }
         numMyAttacks++;
+        
         return new Coordinate(lastAttack.x, lastAttack.y);
     }
 
